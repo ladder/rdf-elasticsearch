@@ -1,0 +1,124 @@
+PATH
+  remote: .
+  specs:
+    rdf-elasticsearch ()
+      elasticsearch-persistence (~> 0.1)
+      rdf (~> 2.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activemodel (5.0.0.1)
+      activesupport (= 5.0.0.1)
+    activesupport (5.0.0.1)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      tzinfo (~> 1.1)
+    addressable (2.4.0)
+    axiom-types (0.1.1)
+      descendants_tracker (~> 0.0.4)
+      ice_nine (~> 0.11.0)
+      thread_safe (~> 0.3, >= 0.3.1)
+    coderay (1.1.1)
+    coercible (1.0.0)
+      descendants_tracker (~> 0.0.1)
+    concurrent-ruby (1.0.2)
+    crack (0.4.3)
+      safe_yaml (~> 1.0.0)
+    descendants_tracker (0.0.4)
+      thread_safe (~> 0.3, >= 0.3.1)
+    diff-lcs (1.2.5)
+    elasticsearch (2.0.0)
+      elasticsearch-api (= 2.0.0)
+      elasticsearch-transport (= 2.0.0)
+    elasticsearch-api (2.0.0)
+      multi_json
+    elasticsearch-model (0.1.9)
+      activesupport (> 3)
+      elasticsearch (> 0.4)
+      hashie
+    elasticsearch-persistence (0.1.9)
+      activemodel (> 3)
+      activesupport (> 3)
+      elasticsearch (> 0.4)
+      elasticsearch-model (>= 0.1)
+      hashie
+      virtus
+    elasticsearch-transport (2.0.0)
+      faraday
+      multi_json
+    equalizer (0.0.11)
+    faraday (0.9.2)
+      multipart-post (>= 1.2, < 3)
+    hamster (3.0.0)
+      concurrent-ruby (~> 1.0)
+    hashdiff (0.3.0)
+    hashie (3.4.4)
+    i18n (0.7.0)
+    ice_nine (0.11.2)
+    link_header (0.0.8)
+    method_source (0.8.2)
+    minitest (5.9.0)
+    multi_json (1.12.1)
+    multipart-post (2.0.0)
+    pry (0.10.4)
+      coderay (~> 1.1.0)
+      method_source (~> 0.8.1)
+      slop (~> 3.4)
+    rdf (2.1.0)
+      hamster (~> 3.0)
+      link_header (~> 0.0, >= 0.0.8)
+    rdf-isomorphic (2.0.0)
+      rdf (~> 2.0)
+    rdf-spec (2.0.0)
+      rdf (~> 2.0)
+      rdf-isomorphic (~> 2.0)
+      rspec (~> 3.0)
+      rspec-its (~> 1.0)
+      webmock (~> 1.17)
+    rspec (3.5.0)
+      rspec-core (~> 3.5.0)
+      rspec-expectations (~> 3.5.0)
+      rspec-mocks (~> 3.5.0)
+    rspec-core (3.5.2)
+      rspec-support (~> 3.5.0)
+    rspec-expectations (3.5.0)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.5.0)
+    rspec-its (1.2.0)
+      rspec-core (>= 3.0.0)
+      rspec-expectations (>= 3.0.0)
+    rspec-mocks (3.5.0)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.5.0)
+    rspec-support (3.5.0)
+    safe_yaml (1.0.4)
+    slop (3.6.0)
+    thread_safe (0.3.5)
+    tzinfo (1.2.2)
+      thread_safe (~> 0.1)
+    virtus (1.0.5)
+      axiom-types (~> 0.1)
+      coercible (~> 1.0)
+      descendants_tracker (~> 0.0, >= 0.0.3)
+      equalizer (~> 0.0, >= 0.0.9)
+    webmock (1.24.6)
+      addressable (>= 2.3.6)
+      crack (>= 0.3.2)
+      hashdiff
+    yard (0.9.5)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  pry
+  rdf-elasticsearch!
+  rdf-spec (~> 2.0)
+  rspec (~> 3.4)
+  rspec-its (~> 1.2)
+  yard (~> 0.8)
+
+BUNDLED WITH
+   1.12.5
