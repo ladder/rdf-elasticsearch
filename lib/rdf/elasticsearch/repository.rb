@@ -20,30 +20,90 @@ module RDF
       def supports?(feature)
         case feature.to_sym
           when :graph_name   then true
-          when :atomic_write then true
+#          when :atomic_write then true
           when :validity     then @options.fetch(:with_validity, true)
           else false
         end
       end
 
-      def clear!
-        client.indices.delete index: '_all'
-      end
+      def clear_statements
+        # FIXME: be specfic about indexes
+        client.indices.delete index: '_all' unless empty?
 
-=begin
+        klass.create_index! # ensure index exists
+      end
+      alias_method :clear!, :clear_statements
+
       ##
       # @private
       # @see RDF::Enumerable#each_statement
       def each_statement(&block)
-        if block_given?
-          @collection.find().each do |document|
-            block.call(RDF::Mongo::Conversion.statement_from_mongo(document))
-          end
-        end
+        klass.find_each { |doc| block.call(doc.to_rdf) } if block_given?
         enum_statement
       end
       alias_method :each, :each_statement
 
+      def insert_statement(statement)
+        # TODO: this will become RDF::Statement.to_document or similar
+        h = statement.to_hash
+        h.update(h) { |k,v| v.to_s }
+        h.merge(id: statement.object_id)
+
+        klass.create(h)
+      end
+
+      def delete_statement(statement)
+        # TODO: this will become RDF::Statement.to_query or similar
+        f = {
+          bool: {
+            must: [
+              {
+                term: { subject: statement.subject.to_s }
+              },
+              {
+                term: { predicate: statement.predicate.to_s }
+              },
+              {
+                term: { object: statement.object.to_s }
+              },
+              {
+                term: { graph_name: statement.graph_name.to_s }
+              }
+            ]
+          }
+        }
+
+        q = {
+          query: {
+            filtered: {
+              query: { match_all: {} },
+              filter: f
+            }
+          }
+        }
+
+        # NB: this does (at least) 2 requests: 1 to find IDs, and 1 to delete each matched document
+        klass.find_each(q) { |s| s.delete }
+      end
+
+      ##
+      # @private
+      # @see RDF::Durable#durable?
+      def durable?; true; end
+
+      ##
+      # @private
+      # @see RDF::Countable#empty?
+      def empty?; klass.count == 0; end
+
+      ##
+      # @private
+      # @see RDF::Countable#count
+      def count
+        klass.count
+      end
+
+=begin
       def apply_changeset(changeset)
         ops = []
 
@@ -62,44 +122,13 @@ module RDF
         @collection.bulk_write(ops, ordered: ordered)
       end
 
-      def insert_statement(statement)
-        st_mongo = statement_to_mongo(statement)
-        @collection.update_one(st_mongo, st_mongo, upsert: true)
-      end
-
-      # @see RDF::Mutable#delete_statement
-      def delete_statement(statement)
-        st_mongo = statement_to_mongo(statement)
-        @collection.delete_one(st_mongo)
-      end
-
-      ##
-      # @private
-      # @see RDF::Durable#durable?
-      def durable?; true; end
-
-      ##
-      # @private
-      # @see RDF::Countable#empty?
-      def empty?; @collection.count == 0; end
-
-      ##
-      # @private
-      # @see RDF::Countable#count
-      def count
-        @collection.count
-      end
-
-      def clear_statements
-        @collection.delete_many
-      end
-
       ##
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
         @collection.find(statement_to_mongo(statement)).count > 0
       end
+
       ##
       # @private
       # @see RDF::Enumerable#each_statement

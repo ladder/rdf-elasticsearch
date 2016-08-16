@@ -22,7 +22,7 @@ describe RDF::Elasticsearch::Repository do
 
   # @see lib/rdf/spec/repository.rb in RDF-spec
   it_behaves_like "an RDF::Repository" do
-    let(:repository) {@repository}
+    let(:repository) { @repository }
   end
 end
 
