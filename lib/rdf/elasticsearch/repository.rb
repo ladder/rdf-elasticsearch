@@ -28,7 +28,7 @@ module RDF
 
       def clear_statements
         # FIXME: be specfic about indexes
-        client.indices.delete index: '_all' unless empty?
+        client.indices.delete index: '_all' unless self.empty?
 
         klass.create_index! # ensure index exists
       end
@@ -44,15 +44,70 @@ module RDF
       alias_method :each, :each_statement
 
       def insert_statement(statement)
-        # TODO: this will become RDF::Statement.to_document or similar
-        h = statement.to_hash
-        h.update(h) { |k,v| v.to_s }
-        h.merge(id: statement.object_id)
-
-        klass.create(h)
+        klass.create(statement_to_document(statement))
       end
 
       def delete_statement(statement)
+        # NB: this does (at least) 2 requests: 1 to find IDs, and 1 to delete each matched document
+        klass.find_each(statement_to_query(statement)) { |s| s.delete }
+      end
+
+      ##
+      # @private
+      # @see RDF::Enumerable#has_statement?
+      def has_statement?(statement)
+        q = statement_to_query(statement)
+        klass.count(q) > 0
+      end
+
+      ##
+      # @private
+      # @see RDF::Enumerable#has_graph?
+      def has_graph?(value)
+        f = {
+          term: { graph_name: statement.graph_name.to_s }
+        }
+
+        q = {
+          query: {
+            filtered: {
+              query: { match_all: {} },
+              filter: f
+            }
+          }
+        }
+binding.pry
+
+        @collection.find(RDF::Mongo::Conversion.p_to_mongo(:graph_name, value)).count > 0
+      end
+
+      ##
+      # @private
+      # @see RDF::Durable#durable?
+      def durable?; true; end
+
+      ##
+      # @private
+      # @see RDF::Countable#empty?
+      def empty?; klass.count == 0; end
+
+      ##
+      # @private
+      # @see RDF::Countable#count
+      def count
+        klass.count
+      end
+
+
+      #### TEMPORARY
+      def statement_to_document(statement)
+        # TODO: this will become RDF::Statement.to_document or similar
+        h = statement.to_hash
+        h.update(h) { |k,v| v.to_s }
+        h.merge!(id: statement.object_id)
+      end
+
+      def statement_to_query(statement)
         # TODO: this will become RDF::Statement.to_query or similar
         f = {
           bool: {
@@ -81,29 +136,27 @@ module RDF
             }
           }
         }
-
-        # NB: this does (at least) 2 requests: 1 to find IDs, and 1 to delete each matched document
-        klass.find_each(q) { |s| s.delete }
       end
-
-      ##
-      # @private
-      # @see RDF::Durable#durable?
-      def durable?; true; end
-
-      ##
-      # @private
-      # @see RDF::Countable#empty?
-      def empty?; klass.count == 0; end
-
-      ##
-      # @private
-      # @see RDF::Countable#count
-      def count
-        klass.count
-      end
+      #### TEMPORARY
 
 =begin
+      protected
+
+      ##
+      # @private
+      # @see RDF::Queryable#query_pattern
+      # @see RDF::Query::Pattern
+      def query_pattern(pattern, options = {}, &block)
+        return enum_for(:query_pattern, pattern, options) unless block_given?
+
+        # A pattern graph_name of `false` is used to indicate the default graph
+        pm = RDF::Mongo::Conversion.pattern_to_mongo(pattern)
+
+        @collection.find(pm).each do |document|
+          block.call(RDF::Mongo::Conversion.statement_from_mongo(document))
+        end
+      end
+
       def apply_changeset(changeset)
         ops = []
 
@@ -120,50 +173,6 @@ module RDF
         # Only use an ordered write if we have both deletes and inserts
         ordered = ! (changeset.inserts.empty? or changeset.deletes.empty?)
         @collection.bulk_write(ops, ordered: ordered)
-      end
-
-      ##
-      # @private
-      # @see RDF::Enumerable#has_statement?
-      def has_statement?(statement)
-        @collection.find(statement_to_mongo(statement)).count > 0
-      end
-
-      ##
-      # @private
-      # @see RDF::Enumerable#each_statement
-      def each_statement(&block)
-        if block_given?
-          @collection.find().each do |document|
-            block.call(RDF::Mongo::Conversion.statement_from_mongo(document))
-          end
-        end
-        enum_statement
-      end
-      alias_method :each, :each_statement
-
-      ##
-      # @private
-      # @see RDF::Enumerable#has_graph?
-      def has_graph?(value)
-        @collection.find(RDF::Mongo::Conversion.p_to_mongo(:graph_name, value)).count > 0
-      end
-
-      protected
-
-      ##
-      # @private
-      # @see RDF::Queryable#query_pattern
-      # @see RDF::Query::Pattern
-      def query_pattern(pattern, options = {}, &block)
-        return enum_for(:query_pattern, pattern, options) unless block_given?
-
-        # A pattern graph_name of `false` is used to indicate the default graph
-        pm = RDF::Mongo::Conversion.pattern_to_mongo(pattern)
-
-        @collection.find(pm).each do |document|
-          block.call(RDF::Mongo::Conversion.statement_from_mongo(document))
-        end
       end
 
       private
