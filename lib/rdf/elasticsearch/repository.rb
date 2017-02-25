@@ -1,20 +1,24 @@
-require 'elasticsearch/persistence'
-require 'rdf/elasticsearch/model/statement'
+require 'elasticsearch'
 
 require 'pry' # TEMPORARY FOR DEBUGGING
 
 module RDF
   module Elasticsearch
     class Repository < ::RDF::Repository
-      include ::Elasticsearch::Persistence::Repository
+      
+      INDEXES = ['uri', 'node', 'literal']
 
       def initialize(options = {}, &block)
-        client ::Elasticsearch::Client.new(url: options[:url] || options[:uri], log: options[:logger])
+        # instantiate client
+        @client = ::Elasticsearch::Client.new(options)
+        
+        # ensure indexes exist
+        INDEXES.each do |i|
+          @client.indices.create index: i unless @client.indices.exists? index: i
+        end
 
         super(options, &block)
       end
-
-      klass RDF::Elasticsearch::Statement
 
       # @see RDF::Mutable#insert_statement
       def supports?(feature)
@@ -26,31 +30,96 @@ module RDF
         end
       end
 
+=begin
       def clear_statements
-        # FIXME: be specfic about indexes
-        client.indices.delete index: '_all' unless self.empty?
-
-        klass.create_index! # ensure index exists
+        # destroys and re-creates all the indexes
+        INDEXES.each do |i|
+          @client.indices.delete index: i if @client.indices.exists? index: i
+          @client.indices.create index: i
+        end
       end
       alias_method :clear!, :clear_statements
+=end
+      
+      ### private methods
+      
+      def node_to_index(node)
+        case node
+          when RDF::URI
+            'uri'
+          when RDF::Node
+            'node'
+          when RDF::Literal
+            'literal'
+          else
+            # TEMPORARY
+            binding.pry
+        end
+      end
+      
+      def statement_to_hash(statement)
+        JSON.parse(statement.to_h.to_json)
+      end
+      
+      ##
+      # @return RDF::Statement
+      def hash_to_statement(hash)
+        # FIXME: this validation is wrong due to a bug in RDF.rb
+        s = hash['subject'].match(RDF::URI::IRI) ? RDF::URI.intern(hash['subject']) : RDF::Node.intern(hash['subject'])
+
+        # predicate
+        p = RDF::URI.intern(hash['predicate'])
+
+        # object
+        # FIXME: literal type / language checking
+        o = RDF::Literal.new(hash['object'])
+
+        # graph name
+        if hash['graph_name'].nil?
+          g = nil
+        else
+          g = hash['graph_name'].match(RDF::URI::IRI) ? RDF::URI.intern(hash['graph_name']) : RDF::Node.intern(hash['graph_name'])
+        end
+
+        RDF::Statement.new(s, p, o, graph_name: g)
+      end
+
+      ### ###
 
       ##
       # @private
       # @see RDF::Enumerable#each_statement
       def each_statement(&block)
-        klass.find_each { |doc| block.call(doc.to_rdf) } if block_given?
+        # Use scroll search syntax - changed in 5.x
+        response = @client.search index: '_all', size: 1000, scroll: '1m', body: {sort: ['_doc']}
+
+        # Call `scroll` until results are empty
+        while response = @client.scroll(scroll_id: response['_scroll_id'], scroll: '1m') and not response['hits']['hits'].empty? do
+          response['hits']['hits'].each do |hit|
+            statement = hash_to_statement(hit['_source'])
+            block.call(statement) if block_given?
+          end
+        end
+        
+        @client.clear_scroll scroll_id: response['_scroll_id']
+
         enum_statement
       end
       alias_method :each, :each_statement
 
       def insert_statement(statement)
-        klass.create(statement_to_document(statement))
+        i = node_to_index(statement.object)
+        # FIXME: how to handle type?
+        @client.index index: i, type: i, body: statement_to_hash(statement)
       end
 
       def delete_statement(statement)
-        # NB: this does (at least) 2 requests: 1 to find IDs, and 1 to delete each matched document
-        klass.find_each(statement_to_query(statement)) { |s| s.delete }
+        i = node_to_index(statement.object)
+#binding.pry
+#        @client.delete_by_query index: i
       end
+
+=begin
 
       ##
       # @private
@@ -76,7 +145,6 @@ module RDF
             }
           }
         }
-binding.pry
 
         @collection.find(RDF::Mongo::Conversion.p_to_mongo(:graph_name, value)).count > 0
       end
@@ -139,7 +207,6 @@ binding.pry
       end
       #### TEMPORARY
 
-=begin
       protected
 
       ##
