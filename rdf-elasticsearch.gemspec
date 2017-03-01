@@ -26,6 +26,7 @@ Gem::Specification.new do |gem|
 
   gem.add_runtime_dependency 'rdf'
   gem.add_runtime_dependency 'elasticsearch'
+  gem.add_runtime_dependency 'elasticsearch-dsl'
 
   gem.add_development_dependency 'pry'
   gem.add_development_dependency 'rdf-spec'

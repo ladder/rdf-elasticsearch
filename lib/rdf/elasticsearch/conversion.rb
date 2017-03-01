@@ -23,11 +23,10 @@ module RDF
       def self.statement_to_mongo(statement)
         h = Hash.new
 
-        statement.to_hash.each do |position, entity|
+        statement.to_h.each do |position, entity|
           value = self.entity_to_mongo(entity)
-          h[position] = value unless value.empty?
+          h["#{position}_#{value.flatten.first}"] = value.flatten.last unless value.empty?
         end
-#binding.pry
 
         h
       end
@@ -67,11 +66,16 @@ module RDF
           { node: entity.id.to_s }
         when RDF::Literal
           if entity.has_language?
-#            { pos => entity.value, type => :lang, extra => entity.language.to_s }
-binding.pry
+            # (literal) 2-character language codes eg. :en, :fr
+            { entity.language => entity.value }
           elsif entity.has_datatype?
-#            { pos => entity.value, type => :type, extra => entity.datatype.to_s }
-binding.pry
+            # (literal) :boolean, :date, :datetime, :decimal, :double, :integer, :numeric, :time, :token
+            if entity.datatype.qname
+              { entity.datatype.qname.join('_') => entity.value } rescue binding.pry
+            else
+              # TODO: FIXME
+              { literal: entity.value }
+            end
           else
             { literal: entity.value }
           end

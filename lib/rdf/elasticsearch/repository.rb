@@ -3,6 +3,7 @@ require 'pry'
 module RDF
   module Elasticsearch
     class Repository < ::RDF::Repository
+      include ::Elasticsearch::DSL
 
       attr_reader :client
       attr_reader :index
@@ -16,7 +17,10 @@ module RDF
         @client.indices.create index: @index unless @client.indices.exists? index: @index
 
         # TODO: type mappings
-        # RDF:Literal Types, URI, Node
+        # :uri, :node, :literal
+        # (literal) 2-character language codes eg. :en, :fr
+        # (literal) :boolean, :date, :datetime, :decimal, :double, :integer, :numeric, :time, :token
+#binding.pry
 
         super(options, &block)
       end
@@ -33,15 +37,14 @@ module RDF
 
       def insert_statement(statement)
         @client.index index: @index,
-                      type: RDF::Elasticsearch::Conversion.entity_to_mongo(statement.object),
+                      type: RDF::Elasticsearch::Conversion.entity_to_mongo(statement.object).flatten.first,
                       body: statement_to_mongo(statement)
       end
 
       # @see RDF::Mutable#delete_statement
       def delete_statement(statement)
-binding.pry
-#        st_mongo = statement_to_mongo(statement)
-#        @collection.delete_one(st_mongo)
+        @client.delete_by_query index: @index,
+                                body: statement_to_query(statement).to_hash
       end
 
       ##
@@ -72,9 +75,9 @@ binding.pry
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
-        q = statement_to_query(statement)
-binding.pry
-#        @collection.find(statement_to_mongo(statement)).count > 0
+        results = @client.count index: @index,
+                                body: statement_to_query(statement).to_hash
+        results['count'] > 0
       end
       
       ##
@@ -115,22 +118,27 @@ binding.pry
         def statement_to_query(statement)
           # TODO: build an elasticsearch-api query to use with @client.search
           st_mongo = statement_to_mongo(statement)
-binding.pry
+
+          search do
+            query do
+              constant_score do
+                filter do
+                  bool do
+                    
+                    st_mongo.each do |field, value|
+                      must do
+                        term field => value
+                      end
+                    end
+                    
+                  end                  
+                end
+              end
+            end
+          end
         end
 
 =begin
-      def delete_statement(statement)
-        @client.delete_by_query index: @index
-      end
-
-      ##
-      # @private
-      # @see RDF::Enumerable#has_statement?
-      def has_statement?(statement)
-        q = statement_to_query(statement)
-        klass.count(q) > 0
-      end
-
       ##
       # @private
       # @see RDF::Enumerable#has_graph?

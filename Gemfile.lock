@@ -3,6 +3,7 @@ PATH
   specs:
     rdf-elasticsearch ()
       elasticsearch
+      elasticsearch-dsl
       rdf
 
 GEM
@@ -20,6 +21,7 @@ GEM
       elasticsearch-transport (= 5.0.3)
     elasticsearch-api (5.0.3)
       multi_json
+    elasticsearch-dsl (0.1.5)
     elasticsearch-transport (5.0.3)
       faraday
       multi_json
