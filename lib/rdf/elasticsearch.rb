@@ -1,6 +1,7 @@
 require 'rdf'
 require 'enumerator'
-
+require 'elasticsearch'
+require 'rdf/elasticsearch/conversion'
 require 'rdf/elasticsearch/repository'
 
 module RDF
