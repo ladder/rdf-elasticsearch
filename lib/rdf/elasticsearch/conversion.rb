@@ -95,9 +95,6 @@ module RDF
       attribute :graph_name, String, # RDF::Resource (RDF::URI or RDF::Node)
                 mapping: { index: 'not_analyzed' }
 
-      # attribute :type, String # TODO: literal type information
-      attribute :id,     String # TODO: use POST to let ES assign IDs
-
       ##
       # @return RDF::Statement
       def to_rdf
@@ -117,52 +114,6 @@ module RDF
 
         RDF::Statement.new(s, p, o, graph_name: g)
       end
-
-      ### private methods
-      
-      def node_to_type(node)
-        case node
-          when RDF::URI
-            'uri'
-          when RDF::Node
-            'node'
-          when RDF::Literal
-            # TEMPORARY
-            binding.pry
-            'literal'
-        end
-      end
-      
-      def statement_to_hash(statement)
-        JSON.parse(statement.to_h.to_json)
-      end
-      
-      ##
-      # @return RDF::Statement
-      def hash_to_statement(hash)
-        # FIXME: this validation is wrong due to a bug in RDF.rb
-binding.pry
-        s = hash['subject'].match(RDF::URI::IRI) ? RDF::URI.intern(hash['subject']) : RDF::Node.intern(hash['subject'])
-
-        # predicate
-        p = RDF::URI.intern(hash['predicate'])
-
-        # object
-        # FIXME: literal type / language checking
-        o = RDF::Literal.new(hash['object'])
-
-        # graph name
-        if hash['graph_name'].nil?
-          g = nil
-        else
-          g = hash['graph_name'].match(RDF::URI::IRI) ? RDF::URI.intern(hash['graph_name']) : RDF::Node.intern(hash['graph_name'])
-        end
-
-        RDF::Statement.new(s, p, o, graph_name: g)
-      end
-
-      ### ###
-
 =end
     end
   end

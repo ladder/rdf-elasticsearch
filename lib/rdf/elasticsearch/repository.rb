@@ -79,7 +79,27 @@ module RDF
                                 body: statement_to_query(statement).to_hash
         results['count'] > 0
       end
-      
+
+      ##
+      # @private
+      # @see RDF::Enumerable#has_graph?
+      def has_graph?(value)
+        # TODO: would be good to re-use #statement_to_query if possible
+
+        q = search do
+          query do
+            constant_score do
+              filter do
+                term graph_name: value.to_s
+              end
+            end
+          end
+        end
+        
+        results = @client.count index: @index, body: q.to_hash
+        results['count'] > 0
+      end
+
       ##
       # @private
       # @see RDF::Enumerable#each_statement
@@ -116,7 +136,6 @@ module RDF
         end
         
         def statement_to_query(statement)
-          # TODO: build an elasticsearch-api query to use with @client.search
           st_mongo = statement_to_mongo(statement)
 
           search do
@@ -139,72 +158,6 @@ module RDF
         end
 
 =begin
-      ##
-      # @private
-      # @see RDF::Enumerable#has_graph?
-      def has_graph?(value)
-binding.pry
-#        @collection.find(RDF::Elasticsearch::Conversion.p_to_mongo(:graph_name, value)).count > 0
-      end
-
-      ##
-      # @private
-      # @see RDF::Enumerable#has_graph?
-      def has_graph?(value)
-        f = {
-          term: { graph_name: statement.graph_name.to_s }
-        }
-
-        q = {
-          query: {
-            filtered: {
-              query: { match_all: {} },
-              filter: f
-            }
-          }
-        }
-
-        @collection.find(RDF::Elasticsearch::Conversion.p_to_mongo(:graph_name, value)).count > 0
-      end
-
-      def statement_to_document(statement)
-        # TODO: this will become RDF::Statement.to_document or similar
-        h = statement.to_hash
-        h.update(h) { |k,v| v.to_s }
-        h.merge!(id: statement.object_id)
-      end
-
-      def statement_to_query(statement)
-        # TODO: this will become RDF::Statement.to_query or similar
-        f = {
-          bool: {
-            must: [
-              {
-                term: { subject: statement.subject.to_s }
-              },
-              {
-                term: { predicate: statement.predicate.to_s }
-              },
-              {
-                term: { object: statement.object.to_s }
-              },
-              {
-                term: { graph_name: statement.graph_name.to_s }
-              }
-            ]
-          }
-        }
-
-        q = {
-          query: {
-            filtered: {
-              query: { match_all: {} },
-              filter: f
-            }
-          }
-        }
-      end
-
       ##
       # @private
       # @see RDF::Queryable#query_pattern
