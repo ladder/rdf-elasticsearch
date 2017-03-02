@@ -16,29 +16,8 @@ module RDF
         @index = options['index'] || "quadb"
         @client.indices.create index: @index unless @client.indices.exists? index: @index
 
-        # TODO: type mappings
-        body = {
-      "dynamic_templates": [
-        {
-          "string_fields": {
-            "match": "*",
-            "match_mapping_type": "*",
-            "mapping": {
-              "index": "not_analyzed",
-              "omit_norms": true,
-              "type": "string"
-            }
-          }
-        }
-      ]
-      }
-        ['lang', 'plain', 'typed', 'uri', 'node', 'type', 'literal'].each do |type|
-          @client.indices.put_mapping index: @index, type: type, body: body, update_all_types: true
-        end
-
-        # :uri, :node, :literal
-        # (literal) 2-character language codes eg. :en, :fr
-        # (literal) :boolean, :date, :datetime, :decimal, :double, :integer, :numeric, :time, :token
+        # set mapping definitions
+        RDF::Elasticsearch::Mappings.ensure_mappings(self)
 
         super(options, &block)
       end
