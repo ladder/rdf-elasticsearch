@@ -17,10 +17,28 @@ module RDF
         @client.indices.create index: @index unless @client.indices.exists? index: @index
 
         # TODO: type mappings
+        body = {
+      "dynamic_templates": [
+        {
+          "string_fields": {
+            "match": "*",
+            "match_mapping_type": "*",
+            "mapping": {
+              "index": "not_analyzed",
+              "omit_norms": true,
+              "type": "string"
+            }
+          }
+        }
+      ]
+      }
+        ['lang', 'plain', 'typed', 'uri', 'node', 'type', 'literal'].each do |type|
+          @client.indices.put_mapping index: @index, type: type, body: body, update_all_types: true
+        end
+
         # :uri, :node, :literal
         # (literal) 2-character language codes eg. :en, :fr
         # (literal) :boolean, :date, :datetime, :decimal, :double, :integer, :numeric, :time, :token
-#binding.pry
 
         super(options, &block)
       end
@@ -36,15 +54,17 @@ module RDF
       end
 
       def insert_statement(statement)
+        st_mongo = statement_to_mongo(statement)
+
         @client.index index: @index,
-                      type: RDF::Elasticsearch::Conversion.entity_to_mongo(statement.object).flatten.first,
-                      body: statement_to_mongo(statement)
+                      type: st_mongo[:ot] || :literal,
+                      body: st_mongo
       end
 
       # @see RDF::Mutable#delete_statement
       def delete_statement(statement)
-        @client.delete_by_query index: @index,
-                                body: statement_to_query(statement).to_hash
+        st_query = statement_to_query(statement)
+        @client.delete_by_query index: @index, body: st_query.to_hash, conflicts: :proceed
       end
 
       ##
@@ -66,17 +86,15 @@ module RDF
       end
 
       def clear_statements
-        # destroys and re-creates the index
-        @client.indices.delete index: @index
-        @client.indices.create index: @index
+        @client.delete_by_query index: @index, body: { }, conflicts: :proceed
       end
 
       ##
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
-        results = @client.count index: @index,
-                                body: statement_to_query(statement).to_hash
+        st_query = statement_to_query(statement)
+        results = @client.count index: @index, body: st_query.to_hash
         results['count'] > 0
       end
 
@@ -85,12 +103,11 @@ module RDF
       # @see RDF::Enumerable#has_graph?
       def has_graph?(value)
         # TODO: would be good to re-use #statement_to_query if possible
-
         q = search do
           query do
             constant_score do
               filter do
-                term graph_name: value.to_s
+                term g: value.to_s
               end
             end
           end
@@ -105,15 +122,16 @@ module RDF
       # @see RDF::Enumerable#each_statement
       def each_statement(&block)
         if block_given?
+
           # Use scroll search syntax - changed in 5.x
-          response = @client.search index: '_all', size: 1000, scroll: '1m', body: {sort: ['_doc']}
+          response = @client.search index: @index, body: { }, size: 1000, scroll: '1m'
 
           # Call `scroll` until results are empty
-          while response = @client.scroll(scroll_id: response['_scroll_id'], scroll: '1m') and not response['hits']['hits'].empty? do
+          until response['hits']['hits'].empty? do
             response['hits']['hits'].each do |hit|
-              # NB: do we need hit['_type'] ?
               block.call(RDF::Elasticsearch::Conversion.statement_from_mongo(hit['_source']))
             end
+            response = @client.scroll(scroll_id: response['_scroll_id'], scroll: '1m')
           end
         
           @client.clear_scroll scroll_id: response['_scroll_id']
