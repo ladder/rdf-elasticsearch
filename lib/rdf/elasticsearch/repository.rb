@@ -51,7 +51,7 @@ module RDF
       end
 
       def clear_statements
-        @client.delete_by_query index: @index, body: { }, conflicts: :proceed, refresh: :wait_for
+        @client.delete_by_query index: @index, body: { }, conflicts: :proceed, refresh: true
       end
 
       def insert_statement(statement)
@@ -65,7 +65,7 @@ module RDF
         st_mongo = statement_to_mongo(statement)
         st_query = statement_to_query(st_mongo)
         
-        @client.delete_by_query index: @index, body: st_query.to_hash, conflicts: :proceed, refresh: :wait_for
+        @client.delete_by_query index: @index, body: st_query.to_hash, conflicts: :proceed, refresh: true
       end
 
       ##

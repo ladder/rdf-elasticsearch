@@ -66,7 +66,7 @@ module RDF
         RDF::Statement.new(
           subject:    RDF::Elasticsearch::Conversion.from_mongo(document['s'], document['st'].to_sym, nil),
           predicate:  RDF::Elasticsearch::Conversion.from_mongo(document['p'], :uri, nil),
-          object:     RDF::Elasticsearch::Conversion.from_mongo(document['o'], document['ot'].to_sym, document['ol']),
+          object:     RDF::Elasticsearch::Conversion.from_mongo(document['o'], document['ot'], document['ol']),
           graph_name: RDF::Elasticsearch::Conversion.from_mongo(document['g'], document['gt'].to_sym, nil))
       end
 
