@@ -11,6 +11,7 @@ module RDF
       def initialize(options = {}, &block)
         # instantiate client
         @client = ::Elasticsearch::Client.new(options)
+        @refresh = options['index']
 
         # create index
         @index = options['index'] || "quadb"
@@ -27,7 +28,7 @@ module RDF
         case feature.to_sym
           when :graph_name   then true
 #          when :atomic_write then true
-#          when :validity     then @options.fetch(:with_validity, true)
+          when :validity     then @options.fetch(:with_validity, true)
           else false
         end
       end
@@ -50,11 +51,10 @@ module RDF
         response['count']
       end
 
-      def clear_statements
-        @client.delete_by_query index: @index, body: { }, conflicts: :proceed, refresh: true
-      end
-
       def insert_statement(statement)
+        # TODO: this is really heavy; look into upsert/update
+        return if self.has_statement? statement # don't write existing statements twice
+
         st_mongo = statement_to_mongo(statement)
 
         @client.index index: @index, type: st_mongo[:ot] || :literal, body: st_mongo, refresh: true
@@ -66,6 +66,10 @@ module RDF
         st_query = statement_to_query(st_mongo)
         
         @client.delete_by_query index: @index, body: st_query.to_hash, conflicts: :proceed, refresh: true
+      end
+
+      def clear_statements
+        @client.delete_by_query index: @index, body: { }, conflicts: :proceed, refresh: true
       end
 
       ##
@@ -99,6 +103,46 @@ module RDF
       end
       alias_method :each, :each_statement
 
+=begin
+      def apply_changeset(changeset)
+binding.pry
+
+        ops = []
+        changeset.deletes.each do |d|
+          st_mongo = statement_to_mongo(d)
+          ops << { delete_one: { filter: st_mongo } }
+        end
+
+        changeset.inserts.each do |i|
+          st_mongo = statement_to_mongo(i)
+          ops << { update_one: { filter: st_mongo, update: st_mongo, upsert: true } }
+        end
+
+        # Only use an ordered write if we have both deletes and inserts
+        ordered = ! (changeset.inserts.empty? or changeset.deletes.empty?)
+        @collection.bulk_write(ops, ordered: ordered)
+      end
+=end
+      protected
+      
+      ##
+      # @private
+      # @see RDF::Queryable#query_pattern
+      # @see RDF::Query::Pattern
+      def query_pattern(pattern, options = {}, &block)
+        return enum_for(:query_pattern, pattern, options) unless block_given?
+
+        # A pattern graph_name of `false` is used to indicate the default graph
+        st_mongo = RDF::Elasticsearch::Conversion.pattern_to_mongo(pattern)
+        st_query = statement_to_query(st_mongo)
+
+#        puts st_mongo
+#        puts st_query.to_hash
+x=        iterate_block(st_query.to_hash, &block)
+y=        enum_statement
+#binding.pry
+      end
+
       private
 
         def enumerator! # @private
@@ -119,8 +163,15 @@ module RDF
                   bool do
                     
                     st_mongo.each do |field, value|
-                      must do
-                        term field => value
+                      # {"$ne" => :default}
+                      if value.is_a? Hash #&& "$ne" == value.keys.first
+                        must_not do
+                          term field => value.values.first
+                        end
+                      else
+                        must do
+                          term field => value
+                        end
                       end
                     end
                     
@@ -129,20 +180,6 @@ module RDF
               end
             end
           end
-        end
-
-        ##
-        # @private
-        # @see RDF::Queryable#query_pattern
-        # @see RDF::Query::Pattern
-        def query_pattern(pattern, options = {}, &block)
-          return enum_for(:query_pattern, pattern, options) unless block_given?
-
-          # A pattern graph_name of `false` is used to indicate the default graph
-          st_mongo = RDF::Elasticsearch::Conversion.pattern_to_mongo(pattern)
-          st_query = statement_to_query(st_mongo)
-
-          iterate_block(st_query.to_hash, &block)
         end
 
         def iterate_block(query_hash, &block)
@@ -159,27 +196,6 @@ module RDF
 
           @client.clear_scroll scroll_id: response['_scroll_id']
         end
-
-=begin
-
-      def apply_changeset(changeset)
-        ops = []
-
-        changeset.deletes.each do |d|
-          st_mongo = statement_to_mongo(d)
-          ops << { delete_one: { filter: st_mongo } }
-        end
-
-        changeset.inserts.each do |i|
-          st_mongo = statement_to_mongo(i)
-          ops << { update_one: { filter: st_mongo, update: st_mongo, upsert: true } }
-        end
-
-        # Only use an ordered write if we have both deletes and inserts
-        ordered = ! (changeset.inserts.empty? or changeset.deletes.empty?)
-        @collection.bulk_write(ops, ordered: ordered)
-      end
-=end
     end
   end
 end
