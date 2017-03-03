@@ -28,7 +28,18 @@ module RDF
           "g": {
             "type": "string",
             "index": "not_analyzed"
+          },
+
+          # TEMPORARY TO REMOVE
+          "ot": {
+            "type": "string",
+            "index": "not_analyzed"
+          },
+          "ol": {
+            "type": "string",
+            "index": "not_analyzed"
           }
+          
         }
       }
 
@@ -59,7 +70,6 @@ module RDF
           data.client.indices.put_mapping index: data.index, type: type, body: body#, update_all_types: true
         end
       end
-
     end
   end
 end

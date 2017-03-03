@@ -35,29 +35,6 @@ module RDF
         end
       end
 
-      # @param [:subject, :predicate, :object, :graph_name] position
-      #   Position within statement.
-      # @param [RDF::Value, Symbol, false, nil] entity
-      #   Variable or Symbol to indicate a pattern for a named graph,
-      #   or `false` to indicate the default graph.
-      #   A value of `nil` indicates a pattern that matches any value.
-      # @return [Hash] BSON representation of the query pattern
-      def self.p_to_mongo(position, pattern)
-        pos = position.to_s.chr
-        type = "#{pos}t".to_sym
-
-        case pattern
-        when RDF::Query::Variable, Symbol
-          # Returns anything other than the default context
-          { type => {"$ne" => :default} }
-        when false
-          # Used for the default context
-          { type => :default}
-        else
-          return self.entity_to_mongo(position, pattern)
-        end
-      end
-
       ##
       # Translate an BSON positional reference to an RDF Value.
       #
@@ -87,10 +64,10 @@ module RDF
       # @return [Hash] Generated BSON representation of statement.
       def self.statement_from_mongo(document)
         RDF::Statement.new(
-          subject:    RDF::Elasticsearch::Conversion.from_mongo(document['s'], document['st'], nil),
+          subject:    RDF::Elasticsearch::Conversion.from_mongo(document['s'], document['st'].to_sym, nil),
           predicate:  RDF::Elasticsearch::Conversion.from_mongo(document['p'], :uri, nil),
-          object:     RDF::Elasticsearch::Conversion.from_mongo(document['o'], document['ot'], document['ol']),
-          graph_name: RDF::Elasticsearch::Conversion.from_mongo(document['g'], document['gt'], nil))
+          object:     RDF::Elasticsearch::Conversion.from_mongo(document['o'], document['ot'].to_sym, document['ol']),
+          graph_name: RDF::Elasticsearch::Conversion.from_mongo(document['g'], document['gt'].to_sym, nil))
       end
 
       ##
@@ -112,6 +89,29 @@ module RDF
         h.merge!(gt: :default) if pattern.graph_name == false
         h.delete(:pt) # Predicate is always a RDF::URI
         h
+      end
+
+      # @param [:subject, :predicate, :object, :graph_name] position
+      #   Position within statement.
+      # @param [RDF::Value, Symbol, false, nil] entity
+      #   Variable or Symbol to indicate a pattern for a named graph,
+      #   or `false` to indicate the default graph.
+      #   A value of `nil` indicates a pattern that matches any value.
+      # @return [Hash] BSON representation of the query pattern
+      def self.p_to_mongo(position, pattern)
+        pos = position.to_s.chr
+        type = "#{pos}t".to_sym
+
+        case pattern
+        when RDF::Query::Variable, Symbol
+          # Returns anything other than the default context
+          { type => {"$ne" => :default} }
+        when false
+          # Used for the default context
+          { type => :default}
+        else
+          return self.entity_to_mongo(position, pattern)
+        end
       end
     end
   end

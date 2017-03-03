@@ -17,7 +17,7 @@ describe RDF::Elasticsearch::Repository do
   end
  
   after :each do
-    @repository.clear_statements
+#    @repository.clear_statements
   end
     
   # @see lib/rdf/spec/repository.rb in RDF-spec
