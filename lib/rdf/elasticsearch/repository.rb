@@ -130,7 +130,7 @@ module RDF
         # Call `scroll` until results are empty
         until response['hits']['hits'].empty? do
           response['hits']['hits'].each do |hit|
-            block.call(RDF::Elasticsearch::Conversion.statement_from_mongo(hit['_source']))
+            block.call(RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source']))
           end
           response = @client.scroll(scroll_id: response['_scroll_id'], scroll: '1m')
         end
@@ -220,7 +220,7 @@ module RDF
 
         def statement_to_hash(statement)
           raise ArgumentError, "Statement #{statement.inspect} is incomplete" if statement.incomplete?
-          RDF::Elasticsearch::Conversion.statement_to_mongo(statement)
+          RDF::Elasticsearch::Conversion.statement_to_es(statement)
         end        
     end
   end

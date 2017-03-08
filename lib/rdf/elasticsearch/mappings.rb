@@ -47,10 +47,35 @@ module RDF
       #
       # Index mappings exist to tell Elasticsearch how to handle
       # (eg. index, analyze, store) data for each type
+      MAPPINGS[:uri] = {
+        "properties": {
+          "uri": {
+            "type": "string",
+            "index": "not_analyzed"
+          }
+        }
+      }
+
+      MAPPINGS[:node] = {
+        "properties": {
+          "uri": {
+            "type": "string",
+            "index": "not_analyzed"
+          }
+        }
+      }
+
+      # TODO: does this just go in object?
+      MAPPINGS[:literal] = {
+        "properties": {
+          "uri": {
+            "type": "string",
+            "index": "not_analyzed"
+          }
+        }
+      }
+
 =begin
-      MAPPINGS[:uri] = {}
-      MAPPINGS[:node] = {}
-      MAPPINGS[:literal] = {} # TODO: does this just go in object?
 
       MAPPINGS[:lang] = {} # TODO: how to handle codes?
 
@@ -67,7 +92,7 @@ module RDF
       
       def self.ensure_mappings(data)
         MAPPINGS.each do |type, body|
-          data.client.indices.put_mapping index: data.index, type: type, body: body#, update_all_types: true
+          data.client.indices.put_mapping index: data.index, type: type, body: body
         end
       end
     end
