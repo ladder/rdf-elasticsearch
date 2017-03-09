@@ -57,15 +57,15 @@ module RDF
 
         hash = statement_to_hash(statement)
 
-        @client.index index: @index, type: hash[:ot] || :literal, body: hash
+        @client.index index: @index, type: hash.delete(:type), body: hash
         @client.indices.refresh index: @index if @refresh
       end
 
       # @see RDF::Mutable#delete_statement
       def delete_statement(statement)
-        st_query = hash_to_query(statement_to_hash(statement))
-        
-        @client.delete_by_query index: @index, body: st_query.to_hash, conflicts: :proceed
+        hash = statement_to_hash(statement)
+
+        @client.delete_by_query index: @index, type: hash.delete(:type), body: hash_to_query(hash).to_hash, conflicts: :proceed
         @client.indices.refresh index: @index if @refresh
       end
 
@@ -78,9 +78,9 @@ module RDF
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
-        st_query = hash_to_query(statement_to_hash(statement))
+        hash = statement_to_hash(statement)
 
-        results = @client.count index: @index, body: st_query.to_hash
+        results = @client.count index: @index, type: hash.delete(:type), body: hash_to_query(hash).to_hash
         results['count'] > 0
       end
 
@@ -88,9 +88,7 @@ module RDF
       # @private
       # @see RDF::Enumerable#has_graph?
       def has_graph?(value)
-        st_query = hash_to_query({ g: value.to_s })
-        
-        results = @client.count index: @index, body: st_query.to_hash
+        results = @client.count index: @index, body: hash_to_query({ g: value.to_s }).to_hash
         results['count'] > 0
       end
 
@@ -139,7 +137,7 @@ module RDF
       end
 
       ######### RDF::Queryable #########
-
+=begin
       ##
       # @private
       # @see RDF::Queryable#query_pattern
@@ -181,17 +179,17 @@ module RDF
           return RDF::Elasticsearch::Conversion.entity_to_mongo(position, pattern)
         end
       end
-
+=end
       def hash_to_query(hash)
         search do
           query do
             constant_score do
               filter do
                 bool do
-                  
                   hash.each do |field, value|
                     # {"$ne" => :default}
                     if value.is_a? Hash #&& "$ne" == value.keys.first
+binding.pry
                       must_not do
                         term field => value.values.first
                       end
@@ -201,7 +199,6 @@ module RDF
                       end
                     end
                   end
-                  
                 end                  
               end
             end

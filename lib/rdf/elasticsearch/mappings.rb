@@ -28,18 +28,7 @@ module RDF
           "g": {
             "type": "string",
             "index": "not_analyzed"
-          },
-
-          # TEMPORARY TO REMOVE
-          "ot": {
-            "type": "string",
-            "index": "not_analyzed"
-          },
-          "ol": {
-            "type": "string",
-            "index": "not_analyzed"
-          }
-          
+          }          
         }
       }
 
@@ -76,7 +65,6 @@ module RDF
       }
 
 =begin
-
       MAPPINGS[:lang] = {} # TODO: how to handle codes?
 
       MAPPINGS[:boolean] = {}
