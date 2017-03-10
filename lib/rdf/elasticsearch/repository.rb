@@ -11,6 +11,8 @@ module RDF
       def initialize(options = {}, &block)
         # instantiate client
         @client = ::Elasticsearch::Client.new(options)
+        
+        # force realtime behaviour (MUCH SLOWER)
         @refresh = options['refresh'] || options[:refresh]
 
         # create index
@@ -152,12 +154,32 @@ module RDF
         pat = pattern.to_h
 
         h = Hash.new
-        h[:s] = pat[:subject]
-        h[:p] = pat[:predicate]
-        h[:o] = pat[:object] # FIXME: what about typing?
+        
+        if pat[:subject].nil?
+        elsif pat[:subject].is_a?(RDF::Query::Variable)
+        else
+          h[:s] = pat[:subject].to_s
+        end
+
+        if pat[:predicate].nil?
+        elsif pat[:predicate].is_a?(RDF::Query::Variable)
+        else
+          h[:p] = pat[:predicate].to_s
+        end
+
+        # TODO: what about typing?
+        if pat[:object].nil?
+        elsif pat[:object].is_a?(RDF::Query::Variable)
+        else
+          serialized = RDF::Elasticsearch::Conversion.serialize_object(pat[:object])
+          serialized.delete :type
+
+          h.merge! serialized
+        end
 
         if false == pat[:graph_name]
           h[:g] = :missing
+        elsif pat[:graph_name].nil?
         else
           h[:g] = pat[:graph_name].is_a?(RDF::Node) ? pat[:graph_name].id.to_s : pat[:graph_name].to_s
         end
@@ -175,7 +197,8 @@ module RDF
                 else
                   bool do
                     hash.each do |field, value|
-                      if :missing == value
+                      case value
+                      when :missing
                         must_not do
                           exists field: field
                         end
@@ -184,6 +207,7 @@ module RDF
                           term field => value
                         end
                       end
+
                     end
                   end
 

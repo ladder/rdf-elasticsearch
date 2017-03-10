@@ -8,7 +8,7 @@ module RDF
         h = Hash.new
 
         # Subject: RDF::Node or RDF::URI
-        h[:s] = statement.subject.is_a?(RDF::Node) ? statement.subject.id.to_s : statement.subject.to_s
+        h[:s] = serialize_resource(statement.subject)
 
         # Predicate: RDF::URI
         h[:p] = statement.predicate.to_s
@@ -18,7 +18,7 @@ module RDF
 
         # Graph Name: RDF::Node or RDF::URI
         if statement.has_graph?
-          h[:g] = statement.graph_name.is_a?(RDF::Node) ? statement.graph_name.id.to_s : statement.graph_name.to_s
+          serialize_resource(statement.graph_name)
         end
 
         h
@@ -26,7 +26,7 @@ module RDF
       
       def self.statement_from_es(type, source)
         # Subject: RDF::Node or RDF::URI
-        s = source["s"].match(RDF::URI::IRI) ? RDF::URI.intern(source["s"]) : RDF::Node.intern(source["s"])
+        s = deserialize_resource(source["s"])
         
         # Predicate: RDF::URI
         p = RDF::URI.intern(source["p"])
@@ -36,10 +36,18 @@ module RDF
 
         # Graph Name: RDF::Node or RDF::URI
         if source["g"]
-          g = source["g"].match(RDF::URI::IRI) ? RDF::URI.intern(source["g"]) : RDF::Node.intern(source["g"])
+          g = deserialize_resource(source["g"])
         end
 
         RDF::Statement.new(s, p, o, graph_name: g)
+      end
+      
+      def self.serialize_resource(resource)
+        resource.is_a?(RDF::Node) ? resource.id.to_s : resource.to_s
+      end
+
+      def self.deserialize_resource(value)
+        value.match(RDF::URI::IRI) ? RDF::URI.intern(value) : RDF::Node.intern(value)
       end
 
       def self.serialize_object(object)
