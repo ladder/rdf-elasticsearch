@@ -8,7 +8,7 @@ describe RDF::Elasticsearch::Repository do
   before :all do
     logger = RDF::Spec.logger
     logger.level = Logger::DEBUG
-    @load_durable = lambda { RDF::Elasticsearch::Repository.new uri: "http://localhost:9200" }
+    @load_durable = lambda { RDF::Elasticsearch::Repository.new uri: "http://localhost:9200", refresh: true }
     @repository = @load_durable.call
   end
 

@@ -36,36 +36,39 @@ module RDF
       #
       # Index mappings exist to tell Elasticsearch how to handle
       # (eg. index, analyze, store) data for each type
-      MAPPINGS[:uri] = {
+      MAPPINGS['uri'] = {
         "properties": {
           "uri": {
             "type": "string",
-            "index": "not_analyzed"
+            "index": "not_analyzed",
+            "copy_to": "o"
           }
         }
       }
 
-      MAPPINGS[:node] = {
+      MAPPINGS['node'] = {
         "properties": {
           "uri": {
             "type": "string",
-            "index": "not_analyzed"
+            "index": "not_analyzed",
+            "copy_to": "o"
           }
         }
       }
 
       # TODO: does this just go in object?
-      MAPPINGS[:literal] = {
+      MAPPINGS['literal'] = {
         "properties": {
           "uri": {
             "type": "string",
-            "index": "not_analyzed"
+            "index": "not_analyzed",
+            "copy_to": "o"
           }
         }
       }
 
 =begin
-      MAPPINGS[:lang] = {} # TODO: how to handle codes?
+      MAPPINGS[:lang_en] = {}
 
       MAPPINGS[:boolean] = {}
       MAPPINGS[:date] = {}

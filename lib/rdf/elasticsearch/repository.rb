@@ -96,7 +96,7 @@ module RDF
       # @private
       # @see RDF::Enumerable#each_statement
       def each_statement(&block)
-        iterate_block({}, &block) if block_given?
+        iterate_block(hash_to_query({}).to_hash, &block) if block_given?
         enum_statement
       end
       alias_method :each, :each_statement
@@ -136,8 +136,6 @@ module RDF
         @client.clear_scroll scroll_id: response['_scroll_id']
       end
 
-      ######### RDF::Queryable #########
-=begin
       ##
       # @private
       # @see RDF::Queryable#query_pattern
@@ -145,61 +143,51 @@ module RDF
       def query_pattern(pattern, options = {}, &block)
         return enum_for(:query_pattern, pattern, options) unless block_given?
 
-        # A pattern graph_name of `false` is used to indicate the default graph
-        h = pattern.to_h.inject({}) do |hash, (position, entity)|
-          hash.merge(p_to_mongo(position, entity))
-        end
-        h.merge!(gt: :default) if pattern.graph_name == false
-        h.delete(:pt) # Predicate is always a RDF::URI
-        st_query = hash_to_query(h)
-
-        iterate_block(st_query.to_hash, &block)
+        iterate_block(pattern_to_query(pattern).to_hash, &block)
         enum_statement
       end
-      
-      # @param [:subject, :predicate, :object, :graph_name] position
-      #   Position within statement.
-      # @param [RDF::Value, Symbol, false, nil] entity
-      #   Variable or Symbol to indicate a pattern for a named graph,
-      #   or `false` to indicate the default graph.
-      #   A value of `nil` indicates a pattern that matches any value.
-      # @return [Hash] BSON representation of the query pattern
-      def p_to_mongo(position, pattern)
-        pos = position.to_s.chr
-        type = "#{pos}t".to_sym
 
-        case pattern
-        when RDF::Query::Variable, Symbol
-          # Returns anything other than the default context
-          { type => {"$ne" => :default} }
-        when false
-          # Used for the default context
-          { type => :default}
+      def pattern_to_query(pattern)
+        # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
+        pat = pattern.to_h
+
+        h = Hash.new
+        h[:s] = pat[:subject]
+        h[:p] = pat[:predicate]
+        h[:o] = pat[:object] # FIXME: what about typing?
+
+        if false == pat[:graph_name]
+          h[:g] = :missing
         else
-          return RDF::Elasticsearch::Conversion.entity_to_mongo(position, pattern)
+          h[:g] = pat[:graph_name].is_a?(RDF::Node) ? pat[:graph_name].id.to_s : pat[:graph_name].to_s
         end
+
+        hash_to_query(h.compact)
       end
-=end
+      
       def hash_to_query(hash)
         search do
           query do
             constant_score do
               filter do
-                bool do
-                  hash.each do |field, value|
-                    # {"$ne" => :default}
-                    if value.is_a? Hash #&& "$ne" == value.keys.first
-binding.pry
-                      must_not do
-                        term field => value.values.first
-                      end
-                    else
-                      must do
-                        term field => value
+                if hash.empty?
+                  match_all
+                else
+                  bool do
+                    hash.each do |field, value|
+                      if :missing == value
+                        must_not do
+                          exists field: field
+                        end
+                      else
+                        must do
+                          term field => value
+                        end
                       end
                     end
                   end
-                end                  
+
+                end
               end
             end
           end
