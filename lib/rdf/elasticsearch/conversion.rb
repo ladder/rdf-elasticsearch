@@ -18,7 +18,7 @@ module RDF
 
         # Graph Name: RDF::Node or RDF::URI
         if statement.has_graph?
-          serialize_resource(statement.graph_name)
+          h[:g] = serialize_resource(statement.graph_name)
         end
 
         h

@@ -80,9 +80,12 @@ module RDF
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
+#puts "\n----\n"
+#puts statement.to_h
         hash = statement_to_hash(statement)
-
+#puts hash
         results = @client.count index: @index, type: hash.delete(:type), body: hash_to_query(hash).to_hash
+#puts results
         results['count'] > 0
       end
 
@@ -123,102 +126,14 @@ module RDF
 =end
       protected
 
-      def iterate_block(query_hash, &block)
-        # Use scroll search syntax - changed in 5.x
-        response = @client.search index: @index, body: query_hash, size: 1000, scroll: '1m'
-
-        # Call `scroll` until results are empty
-        until response['hits']['hits'].empty? do
-          response['hits']['hits'].each do |hit|
-            block.call(RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source']))
-          end
-          response = @client.scroll(scroll_id: response['_scroll_id'], scroll: '1m')
-        end
-
-        @client.clear_scroll scroll_id: response['_scroll_id']
-      end
-
       ##
       # @private
       # @see RDF::Queryable#query_pattern
       # @see RDF::Query::Pattern
       def query_pattern(pattern, options = {}, &block)
         return enum_for(:query_pattern, pattern, options) unless block_given?
-
         iterate_block(pattern_to_query(pattern).to_hash, &block)
-        enum_statement
       end
-
-      def pattern_to_query(pattern)
-        # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
-        pat = pattern.to_h
-
-        h = Hash.new
-        
-        if pat[:subject].nil?
-        elsif pat[:subject].is_a?(RDF::Query::Variable)
-        else
-          h[:s] = pat[:subject].to_s
-        end
-
-        if pat[:predicate].nil?
-        elsif pat[:predicate].is_a?(RDF::Query::Variable)
-        else
-          h[:p] = pat[:predicate].to_s
-        end
-
-        # TODO: what about typing?
-        if pat[:object].nil?
-        elsif pat[:object].is_a?(RDF::Query::Variable)
-        else
-          serialized = RDF::Elasticsearch::Conversion.serialize_object(pat[:object])
-          serialized.delete :type
-
-          h.merge! serialized
-        end
-
-        if false == pat[:graph_name]
-          h[:g] = :missing
-        elsif pat[:graph_name].nil?
-        else
-          h[:g] = pat[:graph_name].is_a?(RDF::Node) ? pat[:graph_name].id.to_s : pat[:graph_name].to_s
-        end
-
-        hash_to_query(h.compact)
-      end
-      
-      def hash_to_query(hash)
-        search do
-          query do
-            constant_score do
-              filter do
-                if hash.empty?
-                  match_all
-                else
-                  bool do
-                    hash.each do |field, value|
-                      case value
-                      when :missing
-                        must_not do
-                          exists field: field
-                        end
-                      else
-                        must do
-                          term field => value
-                        end
-                      end
-
-                    end
-                  end
-
-                end
-              end
-            end
-          end
-        end
-      end
-
-      ####################################
 
       private
 
@@ -230,7 +145,85 @@ module RDF
         def statement_to_hash(statement)
           raise ArgumentError, "Statement #{statement.inspect} is incomplete" if statement.incomplete?
           RDF::Elasticsearch::Conversion.statement_to_es(statement)
-        end        
+        end
+        
+        def iterate_block(query_hash, &block)
+          # Use scroll search syntax - changed in 5.x
+          response = @client.search index: @index, body: query_hash, size: 1000, scroll: '1m'
+
+          # Call `scroll` until results are empty
+          until response['hits']['hits'].empty? do
+            response['hits']['hits'].each do |hit|
+              block.call(RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source']))
+            end
+            response = @client.scroll(scroll_id: response['_scroll_id'], scroll: '1m')
+          end
+
+          @client.clear_scroll scroll_id: response['_scroll_id']
+        end
+
+        def pattern_to_query(pattern)
+          # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
+          pat = pattern.to_h
+
+          h = Hash.new
+        
+          if pat[:subject].nil? || pat[:subject].is_a?(RDF::Query::Variable) # NOP
+          else h[:s] = pat[:subject].to_s
+          end
+
+          if pat[:predicate].nil? || pat[:predicate].is_a?(RDF::Query::Variable) # NOP
+          else h[:p] = pat[:predicate].to_s
+          end
+
+          if pat[:object].nil? || pat[:object].is_a?(RDF::Query::Variable) # NOP
+          else
+            serialized = RDF::Elasticsearch::Conversion.serialize_object(pat[:object])
+            serialized.delete :type
+            h.merge! serialized
+          end
+
+          if pat[:graph_name].nil? # NOP
+          elsif false == pat[:graph_name]
+            h[:g] = :missing
+          else
+            h[:g] = pat[:graph_name].is_a?(RDF::Node) ? pat[:graph_name].id.to_s : pat[:graph_name].to_s
+          end
+
+          hash_to_query(h.compact)
+        end
+      
+        def hash_to_query(hash)
+          search do
+            query do
+              constant_score do
+                filter do
+                  if hash.empty?
+                    match_all
+                  else
+                    bool do
+                      hash.each do |field, value|
+                        case value
+                        when :missing
+                          must_not do
+                            exists field: field
+                          end
+                        else
+                          must do
+                            term field => value
+                          end
+                        end
+
+                      end
+                    end
+
+                  end
+                end
+              end
+            end
+          end
+        end
+
     end
   end
 end

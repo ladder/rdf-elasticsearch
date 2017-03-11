@@ -12,6 +12,19 @@ module RDF
         "_all": {
           "enabled": false
         },
+=begin
+        "dynamic_templates": [
+          {
+            "string_not_analyzed": {
+              "match": "*",
+              "mapping": {
+                "type": "string",
+                "index": "not_analyzed"                
+              }
+            }
+          }
+        ],
+=end
         "properties": {
           "s": {
             "type": "string",
@@ -48,7 +61,7 @@ module RDF
 
       MAPPINGS['node'] = {
         "properties": {
-          "uri": {
+          "node": {
             "type": "string",
             "index": "not_analyzed",
             "copy_to": "o"
@@ -59,7 +72,17 @@ module RDF
       # TODO: does this just go in object?
       MAPPINGS['literal'] = {
         "properties": {
-          "uri": {
+          "literal": {
+            "type": "string",
+            "index": "not_analyzed",
+            "copy_to": "o"
+          }
+        }
+      }
+
+      MAPPINGS['lang_en'] = {
+        "properties": {
+          "lang_en": {
             "type": "string",
             "index": "not_analyzed",
             "copy_to": "o"
@@ -68,17 +91,15 @@ module RDF
       }
 
 =begin
-      MAPPINGS[:lang_en] = {}
-
-      MAPPINGS[:boolean] = {}
-      MAPPINGS[:date] = {}
-      MAPPINGS[:datetime] = {}
-      MAPPINGS[:decimal] = {}
-      MAPPINGS[:double] = {}
-      MAPPINGS[:integer] = {}
-      MAPPINGS[:numeric] = {}
-      MAPPINGS[:time] = {}
-      MAPPINGS[:token] = {}
+      MAPPINGS['xsd:boolean'] = {}
+      MAPPINGS['xsd:date'] = {}
+      MAPPINGS['xsd:datetime'] = {}
+      MAPPINGS['xsd:decimal'] = {}
+      MAPPINGS['xsd:double'] = {}
+      MAPPINGS['xsd:integer'] = {}
+      MAPPINGS['xsd:numeric'] = {}
+      MAPPINGS['xsd:time'] = {}
+      MAPPINGS['xsd:token'] = {}
 =end
       
       def self.ensure_mappings(data)
