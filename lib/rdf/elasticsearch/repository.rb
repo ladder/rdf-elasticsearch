@@ -11,7 +11,7 @@ module RDF
       def initialize(options = {}, &block)
         # instantiate client
         @client = ::Elasticsearch::Client.new(options)
-        
+
         # force realtime behaviour (MUCH SLOWER)
         @refresh = options['refresh'] || options[:refresh]
 
@@ -80,12 +80,9 @@ module RDF
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
-#puts "\n----\n"
-#puts statement.to_h
         hash = statement_to_hash(statement)
-#puts hash
+
         results = @client.count index: @index, type: hash.delete(:type), body: hash_to_query(hash).to_hash
-#puts results
         results['count'] > 0
       end
 
@@ -132,6 +129,12 @@ module RDF
       # @see RDF::Query::Pattern
       def query_pattern(pattern, options = {}, &block)
         return enum_for(:query_pattern, pattern, options) unless block_given?
+=begin
+puts "\n----\n"
+puts pattern.to_h
+puts query_hash = pattern_to_query(pattern).to_hash
+puts @client.search index: @index, body: query_hash
+=end
         iterate_block(pattern_to_query(pattern).to_hash, &block)
       end
 
@@ -146,7 +149,7 @@ module RDF
           raise ArgumentError, "Statement #{statement.inspect} is incomplete" if statement.incomplete?
           RDF::Elasticsearch::Conversion.statement_to_es(statement)
         end
-        
+
         def iterate_block(query_hash, &block)
           # Use scroll search syntax - changed in 5.x
           response = @client.search index: @index, body: query_hash, size: 1000, scroll: '1m'
@@ -167,32 +170,41 @@ module RDF
           pat = pattern.to_h
 
           h = Hash.new
-        
-          if pat[:subject].nil? || pat[:subject].is_a?(RDF::Query::Variable) # NOP
-          else h[:s] = pat[:subject].to_s
+
+          if pat[:subject].nil? # NOP
+          elsif pat[:subject].is_a?(RDF::Query::Variable)
+            h[:s] = :exists
+          else h[:s] = RDF::Elasticsearch::Conversion.serialize_resource(pat[:subject])
           end
 
-          if pat[:predicate].nil? || pat[:predicate].is_a?(RDF::Query::Variable) # NOP
+          if pat[:predicate].nil? # NOP
+          elsif pat[:predicate].is_a?(RDF::Query::Variable)
+            h[:p] = :exists
           else h[:p] = pat[:predicate].to_s
           end
 
-          if pat[:object].nil? || pat[:object].is_a?(RDF::Query::Variable) # NOP
+          if pat[:object].nil? # NOP
+          elsif pat[:object].is_a?(RDF::Query::Variable)
+            h[:o] = :exists
           else
             serialized = RDF::Elasticsearch::Conversion.serialize_object(pat[:object])
+            # TODO: query on :o field instead of typed (?)
             serialized.delete :type
             h.merge! serialized
           end
 
           if pat[:graph_name].nil? # NOP
+          elsif pat[:graph_name].is_a?(RDF::Query::Variable)
+            h[:g] = :exists
           elsif false == pat[:graph_name]
             h[:g] = :missing
           else
-            h[:g] = pat[:graph_name].is_a?(RDF::Node) ? pat[:graph_name].id.to_s : pat[:graph_name].to_s
+            h[:g] = RDF::Elasticsearch::Conversion.serialize_resource(pat[:graph_name])
           end
 
           hash_to_query(h.compact)
         end
-      
+
         def hash_to_query(hash)
           search do
             query do
@@ -204,6 +216,10 @@ module RDF
                     bool do
                       hash.each do |field, value|
                         case value
+                        when :exists
+                          must do
+                            exists field: field
+                          end
                         when :missing
                           must_not do
                             exists field: field

@@ -7,7 +7,7 @@ module RDF
       MAPPINGS = Hash.new
 
       # Base MAPPINGS for subject, predicate, graph_name
-      MAPPINGS['_default_'] = 
+      MAPPINGS['_default_'] =
       {
         "_all": {
           "enabled": false
@@ -19,7 +19,7 @@ module RDF
               "match": "*",
               "mapping": {
                 "type": "string",
-                "index": "not_analyzed"                
+                "index": "not_analyzed"
               }
             }
           }
@@ -41,7 +41,7 @@ module RDF
           "g": {
             "type": "string",
             "index": "not_analyzed"
-          }          
+          }
         }
       }
 
@@ -101,7 +101,7 @@ module RDF
       MAPPINGS['xsd:time'] = {}
       MAPPINGS['xsd:token'] = {}
 =end
-      
+
       def self.ensure_mappings(data)
         MAPPINGS.each do |type, body|
           data.client.indices.put_mapping index: data.index, type: type, body: body

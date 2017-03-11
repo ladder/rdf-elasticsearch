@@ -15,7 +15,7 @@ describe RDF::Elasticsearch::Repository do
   before :each do
     @repository.clear_statements
   end
-    
+
   # @see lib/rdf/spec/repository.rb in RDF-spec
   it_behaves_like "an RDF::Repository" do
     let(:repository) { @repository }

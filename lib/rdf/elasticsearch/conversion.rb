@@ -23,14 +23,14 @@ module RDF
 
         h
       end
-      
+
       def self.statement_from_es(type, source)
         # Subject: RDF::Node or RDF::URI
         s = deserialize_resource(source["s"])
-        
+
         # Predicate: RDF::URI
         p = RDF::URI.intern(source["p"])
-        
+
         # Object
         o = deserialize_object(type, source[type])
 
@@ -41,7 +41,7 @@ module RDF
 
         RDF::Statement.new(s, p, o, graph_name: g)
       end
-      
+
       def self.serialize_resource(resource)
         resource.is_a?(RDF::Node) ? resource.id.to_s : resource.to_s
       end
@@ -69,7 +69,7 @@ module RDF
           end
         end
       end
-      
+
       def self.deserialize_object(type, value)
         case type
         when 'uri'
