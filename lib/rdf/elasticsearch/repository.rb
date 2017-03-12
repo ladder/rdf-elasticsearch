@@ -27,7 +27,7 @@ module RDF
       def supports?(feature)
         case feature.to_sym
           when :graph_name   then true
-          when :literal_equality then true # FIXME: this is to pass Enumerable#each_term; true?
+          when :literal_equality then true
 #          when :atomic_write then true
           when :validity     then @options.fetch(:with_validity, true)
           else false
@@ -53,13 +53,14 @@ module RDF
       end
 
       def insert_statement(statement)
-        # FIXME: this is really heavy; look into upsert/update
-        return if self.has_statement? statement # don't write existing statements twice
+        # don't write existing statements twice
+        # FIXME: this is really heavy; look into upsert/update or @client.exists using generated ID
+        return if self.has_statement? statement
 
         hash = statement_to_hash(statement)
 
         @client.index index: @index, type: hash.delete(:type), body: hash
-        @client.indices.refresh index: @index if @refresh
+        refresh_index if @refresh
       end
 
       # @see RDF::Mutable#delete_statement
@@ -67,13 +68,16 @@ module RDF
         hash = statement_to_hash(statement)
         hash[:g] = :missing if hash[:g].nil? # FIXME: this belongs in #hash_to_query somehow
 
-        @client.delete_by_query index: @index, type: hash.delete(:type), body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash, conflicts: :proceed
-        @client.indices.refresh index: @index if @refresh
+        @client.delete_by_query index: @index, type: hash.delete(:type),
+                                conflicts: :proceed,
+                                body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
+
+        refresh_index if @refresh
       end
 
       def clear_statements
-        @client.delete_by_query index: @index, body: { }, conflicts: :proceed
-        @client.indices.refresh index: @index if @refresh
+        @client.delete_by_query index: @index, conflicts: :proceed, body: { } # match all documents
+        refresh_index if @refresh
       end
 
       ##
@@ -82,8 +86,9 @@ module RDF
       def has_statement?(statement)
         hash = statement_to_hash(statement)
 
-        response = @client.count index: @index, type: hash.delete(:type), body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
-        # TODO: check if count > 1
+        response = @client.count index: @index,
+                                 type: hash.delete(:type),
+                                 body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
         response['count'] > 0
       end
 
@@ -91,8 +96,10 @@ module RDF
       # @private
       # @see RDF::Enumerable#has_graph?
       def has_graph?(value)
-        response = @client.count index: @index, body: RDF::Elasticsearch::Conversion.hash_to_query({ g: value.to_s }).to_hash
-        # TODO: check if count > 1
+        hash = { g: value.to_s } # FIXME: this belongs in #hash_to_query somehow
+
+        response = @client.count index: @index,
+                                 body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
         response['count'] > 0
       end
 
@@ -148,7 +155,7 @@ module RDF
 
         def iterate_block(query_hash, &block)
           # Use scroll search syntax
-          response = @client.search index: @index, body: query_hash, size: 1000, scroll: '1m'
+          response = @client.search index: @index, size: 1000, scroll: '1m', body: query_hash
 
           # Call `scroll` until hits are empty
           until response['hits']['hits'].empty? do
@@ -161,6 +168,9 @@ module RDF
           @client.clear_scroll scroll_id: response['_scroll_id']
         end
 
+        def refresh_index
+          @client.indices.refresh index: @index
+        end
     end
   end
 end

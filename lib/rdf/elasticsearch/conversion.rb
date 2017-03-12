@@ -6,6 +6,7 @@ module RDF
       include ::Elasticsearch::DSL
 
       def self.statement_to_es(statement)
+        # TODO: generate IDs mnaually using eg. xxHash for faster lookups?
         h = Hash.new
 
         # Subject: RDF::Node or RDF::URI
@@ -43,6 +44,10 @@ module RDF
         RDF::Statement.new(s, p, o, graph_name: g)
       end
 
+      #
+      # Serialization-related
+      #
+
       def self.serialize_resource(resource)
         resource.is_a?(RDF::Node) ? resource.id.to_s : resource.to_s
       end
@@ -79,15 +84,16 @@ module RDF
           RDF::Node.intern(value)
         when 'literal'
           RDF::Literal.new(value)
+        when /^lang_(.+)/
+          RDF::Literal.new(value, language: $1.to_sym)
         else
-          # TODO: fold this into when block
-          if type =~ /lang_(.+)/
-            RDF::Literal.new(value, language: $1.to_sym)
-          else
-            RDF::Literal.new(value, datatype: RDF::Vocabulary.expand_pname(type))
-          end
+          RDF::Literal.new(value, datatype: RDF::Vocabulary.expand_pname(type))
         end
       end
+
+      #
+      # Query-related
+      #
 
       def self.pattern_to_query(pattern)
         # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
@@ -95,25 +101,19 @@ module RDF
         h = Hash.new
 
         if pat[:subject].nil? # NOP
-        elsif pat[:subject].is_a?(RDF::Query::Variable)
-          # h[:s] = :exists
-        else h[:s] = self.serialize_resource(pat[:subject])
+        elsif pat[:subject].is_a?(RDF::Query::Variable) # NOP
+        else h[:s] = serialize_resource(pat[:subject])
         end
 
         if pat[:predicate].nil? # NOP
-        elsif pat[:predicate].is_a?(RDF::Query::Variable)
-          # h[:p] = :exists
+        elsif pat[:predicate].is_a?(RDF::Query::Variable) # NOP
         else h[:p] = pat[:predicate].to_s
         end
 
         if pat[:object].nil? # NOP
-        elsif pat[:object].is_a?(RDF::Query::Variable)
-          # FIXME: this fails when looking for typed objects
-          # ie. existence has to check on the :type field (eg. :literal)
-          # h[:o] = :exists
+        elsif pat[:object].is_a?(RDF::Query::Variable) # NOP
         else
-          serialized = self.serialize_object(pat[:object])
-          # TODO: query on :o field instead of typed (?)
+          serialized = serialize_object(pat[:object])
           serialized.delete :type
           h.merge! serialized
         end
@@ -124,18 +124,13 @@ module RDF
         elsif false == pat[:graph_name]
           h[:g] = :missing
         else
-          h[:g] = self.serialize_resource(pat[:graph_name])
+          h[:g] = serialize_resource(pat[:graph_name])
         end
 
         hash_to_query(h.compact)
       end
 
       def self.hash_to_query(hash)
-        # Explicitly default to no graph name (default graph)
-#binding.pry if hash[:g].nil?
-#        hash[:g] = :missing if hash[:g].nil?
-
-        # FIXME: this (self.new) is a bit weird
         self.new.search do
           query do
             constant_score do
@@ -169,6 +164,7 @@ module RDF
           end
         end
       end
+
     end
   end
 end
