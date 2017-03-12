@@ -3,8 +3,6 @@ require 'pry'
 module RDF
   module Elasticsearch
     class Repository < ::RDF::Repository
-      include ::Elasticsearch::DSL
-
       attr_reader :client
       attr_reader :index
 
@@ -29,6 +27,7 @@ module RDF
       def supports?(feature)
         case feature.to_sym
           when :graph_name   then true
+          when :literal_equality then true # FIXME: this is to pass Enumerable#each_term; true?
 #          when :atomic_write then true
           when :validity     then @options.fetch(:with_validity, true)
           else false
@@ -54,7 +53,7 @@ module RDF
       end
 
       def insert_statement(statement)
-        # TODO: this is really heavy; look into upsert/update
+        # FIXME: this is really heavy; look into upsert/update
         return if self.has_statement? statement # don't write existing statements twice
 
         hash = statement_to_hash(statement)
@@ -66,8 +65,9 @@ module RDF
       # @see RDF::Mutable#delete_statement
       def delete_statement(statement)
         hash = statement_to_hash(statement)
+        hash[:g] = :missing if hash[:g].nil? # FIXME: this belongs in #hash_to_query somehow
 
-        @client.delete_by_query index: @index, type: hash.delete(:type), body: hash_to_query(hash).to_hash, conflicts: :proceed
+        @client.delete_by_query index: @index, type: hash.delete(:type), body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash, conflicts: :proceed
         @client.indices.refresh index: @index if @refresh
       end
 
@@ -82,23 +82,25 @@ module RDF
       def has_statement?(statement)
         hash = statement_to_hash(statement)
 
-        results = @client.count index: @index, type: hash.delete(:type), body: hash_to_query(hash).to_hash
-        results['count'] > 0
+        response = @client.count index: @index, type: hash.delete(:type), body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
+        # TODO: check if count > 1
+        response['count'] > 0
       end
 
       ##
       # @private
       # @see RDF::Enumerable#has_graph?
       def has_graph?(value)
-        results = @client.count index: @index, body: hash_to_query({ g: value.to_s }).to_hash
-        results['count'] > 0
+        response = @client.count index: @index, body: RDF::Elasticsearch::Conversion.hash_to_query({ g: value.to_s }).to_hash
+        # TODO: check if count > 1
+        response['count'] > 0
       end
 
       ##
       # @private
       # @see RDF::Enumerable#each_statement
       def each_statement(&block)
-        iterate_block(hash_to_query({}).to_hash, &block) if block_given?
+        iterate_block(RDF::Elasticsearch::Conversion.hash_to_query({}).to_hash, &block) if block_given?
         enum_statement
       end
       alias_method :each, :each_statement
@@ -129,13 +131,7 @@ module RDF
       # @see RDF::Query::Pattern
       def query_pattern(pattern, options = {}, &block)
         return enum_for(:query_pattern, pattern, options) unless block_given?
-=begin
-puts "\n----\n"
-puts pattern.to_h
-puts query_hash = pattern_to_query(pattern).to_hash
-puts @client.search index: @index, body: query_hash
-=end
-        iterate_block(pattern_to_query(pattern).to_hash, &block)
+        iterate_block(RDF::Elasticsearch::Conversion.pattern_to_query(pattern).to_hash, &block)
       end
 
       private
@@ -151,10 +147,10 @@ puts @client.search index: @index, body: query_hash
         end
 
         def iterate_block(query_hash, &block)
-          # Use scroll search syntax - changed in 5.x
+          # Use scroll search syntax
           response = @client.search index: @index, body: query_hash, size: 1000, scroll: '1m'
 
-          # Call `scroll` until results are empty
+          # Call `scroll` until hits are empty
           until response['hits']['hits'].empty? do
             response['hits']['hits'].each do |hit|
               block.call(RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source']))
@@ -163,81 +159,6 @@ puts @client.search index: @index, body: query_hash
           end
 
           @client.clear_scroll scroll_id: response['_scroll_id']
-        end
-
-        def pattern_to_query(pattern)
-          # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
-          pat = pattern.to_h
-
-          h = Hash.new
-
-          if pat[:subject].nil? # NOP
-          elsif pat[:subject].is_a?(RDF::Query::Variable)
-            h[:s] = :exists
-          else h[:s] = RDF::Elasticsearch::Conversion.serialize_resource(pat[:subject])
-          end
-
-          if pat[:predicate].nil? # NOP
-          elsif pat[:predicate].is_a?(RDF::Query::Variable)
-            h[:p] = :exists
-          else h[:p] = pat[:predicate].to_s
-          end
-
-          if pat[:object].nil? # NOP
-          elsif pat[:object].is_a?(RDF::Query::Variable)
-            h[:o] = :exists
-          else
-            serialized = RDF::Elasticsearch::Conversion.serialize_object(pat[:object])
-            # TODO: query on :o field instead of typed (?)
-            serialized.delete :type
-            h.merge! serialized
-          end
-
-          if pat[:graph_name].nil? # NOP
-          elsif pat[:graph_name].is_a?(RDF::Query::Variable)
-            h[:g] = :exists
-          elsif false == pat[:graph_name]
-            h[:g] = :missing
-          else
-            h[:g] = RDF::Elasticsearch::Conversion.serialize_resource(pat[:graph_name])
-          end
-
-          hash_to_query(h.compact)
-        end
-
-        def hash_to_query(hash)
-          search do
-            query do
-              constant_score do
-                filter do
-                  if hash.empty?
-                    match_all
-                  else
-                    bool do
-                      hash.each do |field, value|
-                        case value
-                        when :exists
-                          must do
-                            exists field: field
-                          end
-                        when :missing
-                          must_not do
-                            exists field: field
-                          end
-                        else
-                          must do
-                            term field => value
-                          end
-                        end
-
-                      end
-                    end
-
-                  end
-                end
-              end
-            end
-          end
         end
 
     end

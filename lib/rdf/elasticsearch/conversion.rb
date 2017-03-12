@@ -3,6 +3,7 @@ require 'pry'
 module RDF
   module Elasticsearch
     class Conversion
+      include ::Elasticsearch::DSL
 
       def self.statement_to_es(statement)
         h = Hash.new
@@ -60,8 +61,8 @@ module RDF
           if object.has_language?
             type = "lang_#{object.language}".to_sym
             { type: type, type => object.value }
-
           elsif object.has_datatype?
+            # FIXME: how to handle URI pnames?
             type = object.datatype.pname.to_sym
             { type: type, type => object.value }
           else
@@ -79,6 +80,7 @@ module RDF
         when 'literal'
           RDF::Literal.new(value)
         else
+          # TODO: fold this into when block
           if type =~ /lang_(.+)/
             RDF::Literal.new(value, language: $1.to_sym)
           else
@@ -87,6 +89,86 @@ module RDF
         end
       end
 
+      def self.pattern_to_query(pattern)
+        # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
+        pat = pattern.to_h
+        h = Hash.new
+
+        if pat[:subject].nil? # NOP
+        elsif pat[:subject].is_a?(RDF::Query::Variable)
+          # h[:s] = :exists
+        else h[:s] = self.serialize_resource(pat[:subject])
+        end
+
+        if pat[:predicate].nil? # NOP
+        elsif pat[:predicate].is_a?(RDF::Query::Variable)
+          # h[:p] = :exists
+        else h[:p] = pat[:predicate].to_s
+        end
+
+        if pat[:object].nil? # NOP
+        elsif pat[:object].is_a?(RDF::Query::Variable)
+          # FIXME: this fails when looking for typed objects
+          # ie. existence has to check on the :type field (eg. :literal)
+          # h[:o] = :exists
+        else
+          serialized = self.serialize_object(pat[:object])
+          # TODO: query on :o field instead of typed (?)
+          serialized.delete :type
+          h.merge! serialized
+        end
+
+        if pat[:graph_name].nil? # NOP
+        elsif pat[:graph_name].is_a?(RDF::Query::Variable)
+          h[:g] = :exists
+        elsif false == pat[:graph_name]
+          h[:g] = :missing
+        else
+          h[:g] = self.serialize_resource(pat[:graph_name])
+        end
+
+        hash_to_query(h.compact)
+      end
+
+      def self.hash_to_query(hash)
+        # Explicitly default to no graph name (default graph)
+#binding.pry if hash[:g].nil?
+#        hash[:g] = :missing if hash[:g].nil?
+
+        # FIXME: this (self.new) is a bit weird
+        self.new.search do
+          query do
+            constant_score do
+              filter do
+                if hash.empty?
+                  match_all
+                else
+                  bool do
+                    hash.each do |field, value|
+                      case value
+                      when :exists
+                        must do
+                          exists field: field
+                        end
+                      when :missing
+                        must_not do
+                          exists field: field
+                        end
+                      else
+                        must do
+                          term field => value
+                        end
+                      end
+
+                    end
+                  end
+
+                end
+              end
+            end
+          end
+        end
+      end
     end
   end
 end
