@@ -5,6 +5,7 @@ PATH
       elasticsearch
       elasticsearch-dsl
       rdf
+      ruby-xxHash
 
 GEM
   remote: https://rubygems.org/
@@ -76,6 +77,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.5.0)
     rspec-support (3.5.0)
+    ruby-xxHash (0.4.0.1)
     safe_yaml (1.0.4)
     slop (3.6.0)
     webmock (2.3.2)

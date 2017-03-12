@@ -1,12 +1,16 @@
 require 'pry'
+require 'ruby-xxHash'
 
 module RDF
   module Elasticsearch
     class Conversion
       include ::Elasticsearch::DSL
 
+      def self.statement_to_id(statement)
+        XXhash.xxh64(statement.to_s)
+      end
+
       def self.statement_to_es(statement)
-        # TODO: generate IDs mnaually using eg. xxHash for faster lookups?
         h = Hash.new
 
         # Subject: RDF::Node or RDF::URI
@@ -157,7 +161,6 @@ module RDF
 
                     end
                   end
-
                 end
               end
             end

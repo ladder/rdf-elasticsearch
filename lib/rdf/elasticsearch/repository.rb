@@ -53,51 +53,44 @@ module RDF
       end
 
       def insert_statement(statement)
-        # don't write existing statements twice
-        # FIXME: this is really heavy; look into upsert/update or @client.exists using generated ID
-        return if self.has_statement? statement
-
         hash = statement_to_hash(statement)
-
-        @client.index index: @index, type: hash.delete(:type), body: hash
-        refresh_index if @refresh
+        @client.index index: @index,
+                      type: hash.delete(:type),
+                      refresh: @refresh,
+                      id: RDF::Elasticsearch::Conversion.statement_to_id(statement),
+                      body: hash
       end
 
       # @see RDF::Mutable#delete_statement
       def delete_statement(statement)
         hash = statement_to_hash(statement)
-        hash[:g] = :missing if hash[:g].nil? # FIXME: this belongs in #hash_to_query somehow
-
-        @client.delete_by_query index: @index, type: hash.delete(:type),
-                                conflicts: :proceed,
-                                body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
-
-        refresh_index if @refresh
+        @client.delete index: @index,
+                       type: hash.delete(:type),
+                       ignore: 404,
+                       refresh: @refresh,
+                       id: RDF::Elasticsearch::Conversion.statement_to_id(statement)
       end
 
       def clear_statements
-        @client.delete_by_query index: @index, conflicts: :proceed, body: { } # match all documents
-        refresh_index if @refresh
+        @client.delete_by_query index: @index,
+                                conflicts: :proceed,
+                                refresh: @refresh,
+                                body: { } # match all documents
       end
 
       ##
       # @private
       # @see RDF::Enumerable#has_statement?
       def has_statement?(statement)
-        hash = statement_to_hash(statement)
-
-        response = @client.count index: @index,
-                                 type: hash.delete(:type),
-                                 body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
-        response['count'] > 0
+        @client.exists index: @index,
+                       id: RDF::Elasticsearch::Conversion.statement_to_id(statement)
       end
 
       ##
       # @private
       # @see RDF::Enumerable#has_graph?
       def has_graph?(value)
-        hash = { g: value.to_s } # FIXME: this belongs in #hash_to_query somehow
-
+        hash = { g: value.to_s } # TODO: this belongs in #hash_to_query somehow
         response = @client.count index: @index,
                                  body: RDF::Elasticsearch::Conversion.hash_to_query(hash).to_hash
         response['count'] > 0
@@ -166,10 +159,6 @@ module RDF
           end
 
           @client.clear_scroll scroll_id: response['_scroll_id']
-        end
-
-        def refresh_index
-          @client.indices.refresh index: @index
         end
     end
   end
