@@ -28,7 +28,7 @@ module RDF
         case feature.to_sym
           when :graph_name   then true
           when :literal_equality then true
-#          when :atomic_write then true
+          when :atomic_write then true
           when :validity     then @options.fetch(:with_validity, true)
           else false
         end
@@ -105,24 +105,27 @@ module RDF
       end
       alias_method :each, :each_statement
 
-=begin
       def apply_changeset(changeset)
         ops = []
+
         changeset.deletes.each do |d|
           hash = statement_to_hash(d)
-          ops << { delete_one: { filter: hash } }
+          ops << { delete: { _index: @index,
+                             _type: hash.delete(:type),
+                             _id: RDF::Elasticsearch::Conversion.statement_to_id(d) } }
         end
 
         changeset.inserts.each do |i|
           hash = statement_to_hash(i)
-          ops << { update_one: { filter: hash, update: hash, upsert: true } }
+          ops << { index:  { _index: @index,
+                             _type: hash.delete(:type),
+                             _id: RDF::Elasticsearch::Conversion.statement_to_id(i),
+                             data: hash } }
         end
 
-        # Only use an ordered write if we have both deletes and inserts
-        ordered = ! (changeset.inserts.empty? or changeset.deletes.empty?)
-        @collection.bulk_write(ops, ordered: ordered)
+        @client.bulk body: ops, refresh: @refresh unless ops.empty?
       end
-=end
+
       protected
 
       ##

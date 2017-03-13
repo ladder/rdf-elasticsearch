@@ -100,32 +100,32 @@ module RDF
       #
 
       def self.pattern_to_query(pattern)
-        # {:subject=>nil, :predicate=>nil, :object=>nil, :graph_name=>false}
         pat = pattern.to_h
         h = Hash.new
 
-        if pat[:subject].nil? # NOP
-        elsif pat[:subject].is_a?(RDF::Query::Variable) # NOP
+        case pat[:subject]
+        when nil || RDF::Query::Variable
         else h[:s] = serialize_resource(pat[:subject])
         end
 
-        if pat[:predicate].nil? # NOP
-        elsif pat[:predicate].is_a?(RDF::Query::Variable) # NOP
-        else h[:p] = pat[:predicate].to_s
+        case pat[:predicate]
+        when nil || RDF::Query::Variable
+        else h[:s] = pat[:predicate].to_s
         end
 
-        if pat[:object].nil? # NOP
-        elsif pat[:object].is_a?(RDF::Query::Variable) # NOP
+        case pat[:object]
+        when nil || RDF::Query::Variable
         else
           serialized = serialize_object(pat[:object])
           serialized.delete :type
           h.merge! serialized
         end
 
-        if pat[:graph_name].nil? # NOP
-        elsif pat[:graph_name].is_a?(RDF::Query::Variable)
+        case pat[:graph_name]
+        when nil
+        when RDF::Query::Variable
           h[:g] = :exists
-        elsif false == pat[:graph_name]
+        when false
           h[:g] = :missing
         else
           h[:g] = serialize_resource(pat[:graph_name])
