@@ -2,6 +2,7 @@ require 'rdf'
 require 'enumerator'
 require 'elasticsearch'
 require 'elasticsearch/dsl'
+require 'ruby-xxHash'
 
 require 'rdf/elasticsearch/conversion'
 require 'rdf/elasticsearch/mappings'

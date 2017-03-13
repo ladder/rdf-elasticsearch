@@ -1,6 +1,3 @@
-require 'pry'
-require 'ruby-xxHash'
-
 module RDF
   module Elasticsearch
     class Conversion
@@ -158,7 +155,6 @@ module RDF
                           term field => value
                         end
                       end
-
                     end
                   end
                 end

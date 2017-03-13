@@ -1,5 +1,3 @@
-require 'pry'
-
 module RDF
   module Elasticsearch
     class Repository < ::RDF::Repository
@@ -26,10 +24,10 @@ module RDF
       # @see RDF::Mutable#insert_statement
       def supports?(feature)
         case feature.to_sym
-          when :graph_name   then true
+          when :graph_name       then true
           when :literal_equality then true
-          when :atomic_write then true
-          when :validity     then @options.fetch(:with_validity, true)
+          when :atomic_write     then true
+          when :validity         then @options.fetch(:with_validity, true)
           else false
         end
       end

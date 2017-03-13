@@ -29,8 +29,6 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency 'elasticsearch-dsl'
   gem.add_runtime_dependency 'ruby-xxHash'
 
-  gem.add_development_dependency 'pry-rescue'
-  gem.add_development_dependency 'pry-stack_explorer'
   gem.add_development_dependency 'pry'
   gem.add_development_dependency 'rdf-spec'
   gem.add_development_dependency 'rspec'
