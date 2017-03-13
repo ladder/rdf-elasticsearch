@@ -104,31 +104,31 @@ module RDF
         h = Hash.new
 
         case pat[:subject]
-        when nil || RDF::Query::Variable
-        else h[:s] = serialize_resource(pat[:subject])
+          when nil
+          when RDF::Query::Variable
+          else h[:s] = serialize_resource(pat[:subject])
         end
 
         case pat[:predicate]
-        when nil || RDF::Query::Variable
-        else h[:s] = pat[:predicate].to_s
+          when nil
+          when RDF::Query::Variable
+          else h[:p] = pat[:predicate].to_s
         end
 
         case pat[:object]
-        when nil || RDF::Query::Variable
-        else
-          serialized = serialize_object(pat[:object])
-          serialized.delete :type
-          h.merge! serialized
+          when nil
+          when RDF::Query::Variable
+          else
+            serialized = serialize_object(pat[:object])
+            serialized.delete :type
+            h.merge! serialized
         end
 
         case pat[:graph_name]
-        when nil
-        when RDF::Query::Variable
-          h[:g] = :exists
-        when false
-          h[:g] = :missing
-        else
-          h[:g] = serialize_resource(pat[:graph_name])
+          when nil
+          when RDF::Query::Variable then h[:g] = :exists
+          when false then h[:g] = :missing
+          else h[:g] = serialize_resource(pat[:graph_name])
         end
 
         hash_to_query(h.compact)
