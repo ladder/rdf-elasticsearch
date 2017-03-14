@@ -18,8 +18,8 @@ module RDF
             "string_not_analyzed": {
               "match": "*",
               "mapping": {
-                "type": "string",
-                "index": "not_analyzed"
+                "type": "text",
+                "index": "no"
               }
             }
           }
@@ -27,20 +27,16 @@ module RDF
 =end
         "properties": {
           "s": {
-            "type": "string",
-            "index": "not_analyzed"
+            "type": "text"
           },
           "p": {
-            "type": "string",
-            "index": "not_analyzed"
+            "type": "text"
           },
           "o": {
-            "type": "string",
-            "index": "not_analyzed"
+            "type": "text"
           },
           "g": {
-            "type": "string",
-            "index": "not_analyzed"
+            "type": "text"
           }
         }
       }
@@ -52,9 +48,8 @@ module RDF
       MAPPINGS['uri'] = {
         "properties": {
           "uri": {
-            "type": "string",
-            "index": "not_analyzed",
-            "copy_to": "o"
+            "type": "text",
+            "analyzer": "keyword"
           }
         }
       }
@@ -62,9 +57,8 @@ module RDF
       MAPPINGS['node'] = {
         "properties": {
           "node": {
-            "type": "string",
-            "index": "not_analyzed",
-            "copy_to": "o"
+            "type": "text",
+            "analyzer": "keyword"
           }
         }
       }
@@ -73,34 +67,103 @@ module RDF
       MAPPINGS['literal'] = {
         "properties": {
           "literal": {
-            "type": "string",
-            "index": "not_analyzed",
-            "copy_to": "o"
+            "type": "text",
+            "analyzer": "standard"
           }
         }
       }
+
+      #
+      # XSD datatypes for RDF::Litreral objects
+      #
+
+      MAPPINGS['xsd:boolean'] = {
+        "properties": {
+          "xsd:boolean": {
+            "type": "boolean"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:date'] = {
+        "properties": {
+          "xsd:date": {
+            "type": "date"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:datetime'] = {
+        "properties": {
+          "xsd:datetime": {
+            "type": "date"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:decimal'] = {
+        "properties": {
+          "xsd:decimal": {
+            "type": "float"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:double'] = {
+        "properties": {
+          "xsd:double": {
+            "type": "double"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:integer'] = {
+        "properties": {
+          "xsd:integer": {
+            "type": "long"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:time'] = {
+        "properties": {
+          "xsd:time": {
+            "type": "date"
+          }
+        }
+      }
+
+      MAPPINGS['xsd:token'] = {
+        "properties": {
+          "xsd:token": {
+            "type": "keyword"
+          }
+        }
+      }
+
+      #
+      # Language-typed literal analyzers (from Elastic)
+      #
+      # Arabic, Armenian, Basque, Brazilian, Bulgarian, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, French, Galician, German, Greek, Hindi, Hungarian, Indonesian, Irish, Italian, Japanese, Korean, Kurdish, Norwegian, Persian, Portuguese, Romanian, Russian, Spanish, Swedish, Turkish, and Thai.
+      #
 
       MAPPINGS['lang_en'] = {
         "properties": {
           "lang_en": {
-            "type": "string",
-            "index": "not_analyzed",
-            "copy_to": "o"
+            "type": "text",
+            "analyzer": "english"
           }
         }
       }
 
-=begin
-      MAPPINGS['xsd:boolean'] = {}
-      MAPPINGS['xsd:date'] = {}
-      MAPPINGS['xsd:datetime'] = {}
-      MAPPINGS['xsd:decimal'] = {}
-      MAPPINGS['xsd:double'] = {}
-      MAPPINGS['xsd:integer'] = {}
-      MAPPINGS['xsd:numeric'] = {}
-      MAPPINGS['xsd:time'] = {}
-      MAPPINGS['xsd:token'] = {}
-=end
+      MAPPINGS['lang_fi'] = {
+        "properties": {
+          "lang_fi": {
+            "type": "text",
+            "analyzer": "finnish"
+          }
+        }
+      }
 
       def self.ensure_mappings(data)
         MAPPINGS.each do |type, body|

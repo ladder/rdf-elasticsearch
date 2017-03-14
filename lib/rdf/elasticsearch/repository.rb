@@ -13,6 +13,8 @@ module RDF
 
         # create index
         @index = options['index'] || "quadb"
+
+        @client.indices.delete index: @index if options['clean'] || options[:clean]
         @client.indices.create index: @index unless @client.indices.exists? index: @index
 
         # set mapping definitions
