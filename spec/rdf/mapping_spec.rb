@@ -19,7 +19,7 @@ describe RDF::Elasticsearch::Mappings do
     @repository.clear_statements
   end
 
-  shared_examples "an RDF::Elasticsearch::Mapping" do
+  shared_examples "a mapped RDF::Term" do
     let (:statement) { RDF::Statement.new(RDF::Node.new, RDF::URI.new("urn:predicate:1"), subject) }
 
     before do
@@ -29,9 +29,12 @@ puts "\n"
     end
 
     it 'should match default query' do
+=begin
       hash = RDF::Elasticsearch::Conversion.statement_to_es(statement)
+      hash.delete(:type)
       body = RDF::Elasticsearch::Conversion.hash_to_query(hash)
 puts body.to_hash
+=end
       @repository.has_statement? statement
     end
 
@@ -44,12 +47,11 @@ puts body.to_hash
           match hash
         end
       end
-puts body.to_hash
+#puts body.to_hash
       response = @repository.client.search index: @repository.index, body: body.to_hash
       hit = response['hits']['hits'].first
-      deserialized = RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source'])
 
-      expect(deserialized).to eq(statement)
+      expect(RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source'])).to eq(statement)
     end
 
     it 'should be searchable untyped' do
@@ -59,36 +61,35 @@ puts body.to_hash
       body = search do
         query do
           simple_query_string do
-            query value
+            query value.to_s
           end
         end
       end
-puts body.to_hash
+#puts body.to_hash
       response = @repository.client.search index: @repository.index, body: body.to_hash
       hit = response['hits']['hits'].first
-      deserialized = RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source'])
 
       response = @repository.client.search index: @repository.index, body: body.to_hash
-      expect(deserialized).to eq(statement)
+      expect(RDF::Elasticsearch::Conversion.statement_from_es(hit['_type'], hit['_source'])).to eq(statement)
     end
   end
 
   context "with RDF::URI" do
     let (:subject) { RDF::URI.new("urn:object:1") }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   context "with RDF::Node" do
     let (:subject) { RDF::Node.new('object:1') }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   context "with RDF::Literal" do
     let (:subject) { RDF::Literal.new('abc') }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   #
@@ -99,56 +100,56 @@ puts body.to_hash
   context "with RDF::Literal::Boolean" do
     let (:subject) { RDF::Literal.new(false, datatype: RDF::XSD.boolean) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # date
   context "with RDF::Literal::Date" do
     let (:subject) { RDF::Literal.new(Date.new(2010), datatype: RDF::XSD.date) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # datetime
   context "with RDF::Literal::DateTime" do
     let (:subject) { RDF::Literal.new(DateTime.new(2011), datatype: RDF::XSD.dateTime) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # decimal
   context "with RDF::Literal::Decimal" do
     let (:subject) { RDF::Literal.new(1.1, datatype: RDF::XSD.decimal) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # double
   context "with RDF::Literal::Double" do
     let (:subject) { RDF::Literal.new(3.1415, datatype: RDF::XSD.double) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # integer
   context "with RDF::Literal::Integer" do
     let (:subject) { RDF::Literal.new(1, datatype: RDF::XSD.integer) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # time
   context "with RDF::Literal::Time" do
     let (:subject) { RDF::Literal.new(Time.now, datatype: RDF::XSD.time) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   # token
   context "with RDF::Literal::Token" do
     let (:subject) { RDF::Literal.new(:xyz, datatype: RDF::XSD.token) }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   #
@@ -158,13 +159,13 @@ puts body.to_hash
   context "with English literal" do
     let (:subject) { RDF::Literal.new('abc', language: 'en') }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
   context "with Finnish literal" do
     let (:subject) { RDF::Literal.new('abc', language: 'fi') }
 
-    it_behaves_like 'an RDF::Elasticsearch::Mapping'
+    it_behaves_like 'a mapped RDF::Term'
   end
 
 end

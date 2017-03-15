@@ -27,7 +27,6 @@ module RDF
       def supports?(feature)
         case feature.to_sym
           when :graph_name       then true
-          when :literal_equality then true
           when :atomic_write     then true
           when :validity         then @options.fetch(:with_validity, true)
           else false

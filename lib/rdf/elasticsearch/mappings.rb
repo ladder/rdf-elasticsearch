@@ -12,31 +12,18 @@ module RDF
         "_all": {
           "enabled": false
         },
-=begin
-        "dynamic_templates": [
-          {
-            "string_not_analyzed": {
-              "match": "*",
-              "mapping": {
-                "type": "text",
-                "index": "no"
-              }
-            }
-          }
-        ],
-=end
         "properties": {
           "s": {
-            "type": "text"
+            "type": "keyword" # exact-value
           },
           "p": {
-            "type": "text"
+            "type": "keyword" # exact-value
           },
           "o": {
-            "type": "text"
+            "type": "keyword" # exact-value
           },
           "g": {
-            "type": "text"
+            "type": "keyword" # exact-value
           }
         }
       }
@@ -49,7 +36,7 @@ module RDF
         "properties": {
           "uri": {
             "type": "text",
-            "analyzer": "keyword"
+            "analyzer": "keyword" # exact-value
           }
         }
       }
@@ -58,12 +45,11 @@ module RDF
         "properties": {
           "node": {
             "type": "text",
-            "analyzer": "keyword"
+            "analyzer": "keyword" # exact-value
           }
         }
       }
 
-      # TODO: does this just go in object?
       MAPPINGS['literal'] = {
         "properties": {
           "literal": {
@@ -80,7 +66,8 @@ module RDF
       MAPPINGS['xsd:boolean'] = {
         "properties": {
           "xsd:boolean": {
-            "type": "boolean"
+            "type": "boolean",
+            "copy_to": "o"
           }
         }
       }
@@ -128,7 +115,8 @@ module RDF
       MAPPINGS['xsd:time'] = {
         "properties": {
           "xsd:time": {
-            "type": "date"
+            "type": "date",
+            "format": "HH:mm:ssZ"
           }
         }
       }
@@ -136,7 +124,7 @@ module RDF
       MAPPINGS['xsd:token'] = {
         "properties": {
           "xsd:token": {
-            "type": "keyword"
+            "type": "keyword" # exact-value
           }
         }
       }
