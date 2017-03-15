@@ -35,8 +35,7 @@ module RDF
       MAPPINGS['uri'] = {
         "properties": {
           "uri": {
-            "type": "text",
-            "analyzer": "keyword" # exact-value
+            "type": "keyword" # exact-value
           }
         }
       }
@@ -44,8 +43,7 @@ module RDF
       MAPPINGS['node'] = {
         "properties": {
           "node": {
-            "type": "text",
-            "analyzer": "keyword" # exact-value
+            "type": "keyword" # exact-value
           }
         }
       }
@@ -54,7 +52,7 @@ module RDF
         "properties": {
           "literal": {
             "type": "text",
-            "analyzer": "standard"
+            "analyzer": "standard" # (default)
           }
         }
       }

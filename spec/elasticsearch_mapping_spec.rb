@@ -1,8 +1,8 @@
 $:.unshift "."
 require 'spec_helper'
 
+#require 'rdf/spec/literal'
 require 'rdf/elasticsearch'
-require 'pry'
 
 include Elasticsearch::DSL
 
@@ -25,7 +25,6 @@ describe RDF::Elasticsearch::Mappings do
     before do
       # create and persist a statement
       @repository.insert_statement(statement)
-puts "\n"
     end
 
     it 'should match default query' do
