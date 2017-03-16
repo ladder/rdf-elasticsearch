@@ -35,7 +35,7 @@ module RDF
         p = RDF::URI.intern(source["p"])
 
         # Object
-        o = deserialize_object(type, source[type])
+        o = deserialize_object(type, source)
 
         # Graph Name: RDF::Node or RDF::URI
         if source["g"]
@@ -68,16 +68,25 @@ module RDF
             type = "lang_#{object.language}".to_sym
             { type: type, type => object.value }
           elsif object.has_datatype?
-            # FIXME: how to handle URI pnames?
-            type = object.datatype.pname.to_sym
-            { type: type, type => object.value }
+            # for built-in RDF::Vocabulary types, use pname eg. "xsd:boolean"
+            if RDF::Vocabulary.find object.datatype
+              type = object.datatype.pname.to_sym
+              { type: type, type => object.value }
+            else
+              # custom datatypes eg. with URI pnames
+              { type: :typed, typed: object.value, datatype: object.datatype.to_s }
+            end
+
+            #type = object.datatype.pname.to_sym
+            #{ type: type, type => object.value }
           else
             { type: :literal, literal: object.value }
           end
         end
       end
 
-      def self.deserialize_object(type, value)
+      def self.deserialize_object(type, source)
+        value = source[type]
         case type
         when 'uri'
           RDF::URI.intern(value)
@@ -87,7 +96,9 @@ module RDF
           RDF::Literal.new(value)
         when /^lang_(.+)/
           RDF::Literal.new(value, language: $1.to_sym)
-        else
+        when 'typed'
+          RDF::Literal.new(value, datatype: source['datatype'])
+        else # built-in RDF::Literal types, eg. "xsd:boolean"
           RDF::Literal.new(value, datatype: RDF::Vocabulary.expand_pname(type))
         end
       end

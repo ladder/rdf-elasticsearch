@@ -14,16 +14,16 @@ module RDF
         },
         "properties": {
           "s": {
-            "type": "keyword" # exact-value
+            "type": "keyword"
           },
           "p": {
-            "type": "keyword" # exact-value
+            "type": "keyword"
           },
           "o": {
-            "type": "keyword" # exact-value
+            "type": "keyword" # this becomes the _all field
           },
           "g": {
-            "type": "keyword" # exact-value
+            "type": "keyword"
           }
         }
       }
@@ -35,7 +35,7 @@ module RDF
       MAPPINGS['uri'] = {
         "properties": {
           "uri": {
-            "type": "keyword" # exact-value
+            "type": "keyword"
           }
         }
       }
@@ -43,7 +43,7 @@ module RDF
       MAPPINGS['node'] = {
         "properties": {
           "node": {
-            "type": "keyword" # exact-value
+            "type": "keyword"
           }
         }
       }
@@ -52,7 +52,8 @@ module RDF
         "properties": {
           "literal": {
             "type": "text",
-            "analyzer": "standard" # (default)
+            "analyzer": "standard",
+            "copy_to": "o"
           }
         }
       }
@@ -73,7 +74,8 @@ module RDF
       MAPPINGS['xsd:date'] = {
         "properties": {
           "xsd:date": {
-            "type": "date"
+            "type": "date",
+            "copy_to": "o"
           }
         }
       }
@@ -81,7 +83,8 @@ module RDF
       MAPPINGS['xsd:datetime'] = {
         "properties": {
           "xsd:datetime": {
-            "type": "date"
+            "type": "date",
+            "copy_to": "o"
           }
         }
       }
@@ -89,7 +92,8 @@ module RDF
       MAPPINGS['xsd:decimal'] = {
         "properties": {
           "xsd:decimal": {
-            "type": "float"
+            "type": "float",
+            "copy_to": "o"
           }
         }
       }
@@ -97,7 +101,8 @@ module RDF
       MAPPINGS['xsd:double'] = {
         "properties": {
           "xsd:double": {
-            "type": "double"
+            "type": "double",
+            "copy_to": "o"
           }
         }
       }
@@ -105,7 +110,8 @@ module RDF
       MAPPINGS['xsd:integer'] = {
         "properties": {
           "xsd:integer": {
-            "type": "long"
+            "type": "long",
+            "copy_to": "o"
           }
         }
       }
@@ -114,7 +120,8 @@ module RDF
         "properties": {
           "xsd:time": {
             "type": "date",
-            "format": "HH:mm:ssZ"
+            "format": "HH:mm:ssZ",
+            "copy_to": "o"
           }
         }
       }
@@ -122,7 +129,8 @@ module RDF
       MAPPINGS['xsd:token'] = {
         "properties": {
           "xsd:token": {
-            "type": "keyword" # exact-value
+            "type": "keyword",
+            "copy_to": "o"
           }
         }
       }

@@ -14,8 +14,10 @@ module RDF
         # create index
         @index = options['index'] || "quadb"
 
-        @client.indices.delete index: @index if options['clean'] || options[:clean]
-        @client.indices.create index: @index unless @client.indices.exists? index: @index
+        if @client.indices.exists? index: @index
+          @client.indices.delete index: @index if options['clean'] || options[:clean]
+        end
+        @client.indices.create index: @index
 
         # set mapping definitions
         RDF::Elasticsearch::Mappings.ensure_mappings(self)
@@ -150,6 +152,7 @@ module RDF
 
         def iterate_block(query_hash, &block)
           # Use scroll search syntax
+
           response = @client.search index: @index, size: 1000, scroll: '1m', body: query_hash
 
           # Call `scroll` until hits are empty
