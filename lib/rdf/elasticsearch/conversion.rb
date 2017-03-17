@@ -69,9 +69,9 @@ module RDF
           if object.has_language?
             { type: "lang_#{object.language}", o: object.value }
           elsif object.has_datatype?
-            # for built-in RDF::Vocabulary types, use pname eg. "xsd:boolean"
+            # for built-in RDF::Vocabulary types, use pname eg. "xsd:boolean" -> "boolean"
             if RDF::Vocabulary.find object.datatype
-              { type: object.datatype.pname.to_s, o: object.value }
+              { type: object.datatype.qname.last, o: object.value }
             else
               # custom datatypes eg. with URI pnames
               { type: :typed, o: object.value, datatype: object.datatype.to_s }
@@ -96,7 +96,7 @@ module RDF
         when 'typed'
           RDF::Literal.new(value, datatype: source['datatype'])
         else # built-in RDF::Literal types, eg. "xsd:boolean"
-          RDF::Literal.new(value, datatype: RDF::Vocabulary.expand_pname(type))
+          RDF::Literal.new(value, datatype: RDF::Vocabulary.expand_pname("xsd:#{type}"))
         end
       end
 

@@ -13,10 +13,9 @@ module RDF
 
         # create index
         @index = options['index'] || "quadb"
-        @client.indices.create index: @index unless @client.indices.exists? index: @index
 
-        # set mapping definitions
-        RDF::Elasticsearch::Mappings.ensure_mappings(self)
+        @client.indices.create index: @index,
+                               body: RDF::Elasticsearch::Mappings.index unless @client.indices.exists? index: @index
 
         super(options, &block)
       end
