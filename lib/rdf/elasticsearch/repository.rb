@@ -13,11 +13,7 @@ module RDF
 
         # create index
         @index = options['index'] || "quadb"
-
-        if @client.indices.exists? index: @index
-          @client.indices.delete index: @index if options['clean'] || options[:clean]
-        end
-        @client.indices.create index: @index
+        @client.indices.create index: @index unless @client.indices.exists? index: @index
 
         # set mapping definitions
         RDF::Elasticsearch::Mappings.ensure_mappings(self)
@@ -30,6 +26,7 @@ module RDF
         case feature.to_sym
           when :graph_name       then true
           when :atomic_write     then true
+          # when :literal_equality then true
           when :validity         then @options.fetch(:with_validity, true)
           else false
         end

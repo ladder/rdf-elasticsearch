@@ -7,6 +7,7 @@ module RDF
       MAPPINGS = Hash.new
 
       # Base MAPPINGS for subject, predicate, graph_name
+      # FIXME: send _default_ type separately?
       MAPPINGS['_default_'] =
       {
         "_all": {
@@ -32,28 +33,72 @@ module RDF
       #
       # Index mappings exist to tell Elasticsearch how to handle
       # (eg. index, analyze, store) data for each type
+
       MAPPINGS['uri'] = {
         "properties": {
-          "uri": {
-            "type": "keyword"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "uri": {
+                "type": "keyword"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['node'] = {
         "properties": {
-          "node": {
-            "type": "keyword"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "node": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      }
+
+      MAPPINGS['token'] = {
+        "properties": {
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "token": {
+                "type": "keyword"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['literal'] = {
         "properties": {
-          "literal": {
-            "type": "text",
-            "analyzer": "standard",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "literal": {
+                "type": "text"
+              }
+            }
+          }
+        }
+      }
+
+      # for typed literals
+      MAPPINGS['typed'] = {
+        "properties": {
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "typed": {
+                "type": "keyword"
+              }
+            }
+          },
+          "datatype": {
+            "type": "keyword"
           }
         }
       }
@@ -64,73 +109,92 @@ module RDF
 
       MAPPINGS['xsd:boolean'] = {
         "properties": {
-          "xsd:boolean": {
-            "type": "boolean",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "xsd:boolean": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['xsd:date'] = {
         "properties": {
-          "xsd:date": {
-            "type": "date",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "xsd:date": {
+                "type": "date"
+              }
+            }
           }
         }
       }
 
-      MAPPINGS['xsd:datetime'] = {
+      MAPPINGS['xsd:dateTime'] = {
         "properties": {
-          "xsd:datetime": {
-            "type": "date",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "xsd:dateTime": {
+                "type": "date"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['xsd:decimal'] = {
         "properties": {
-          "xsd:decimal": {
-            "type": "float",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "xsd:decimal": {
+                "type": "float"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['xsd:double'] = {
         "properties": {
-          "xsd:double": {
-            "type": "double",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "xsd:double": {
+                "type": "double"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['xsd:integer'] = {
         "properties": {
-          "xsd:integer": {
-            "type": "long",
-            "copy_to": "o"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "xsd:integer": {
+                "type": "integer"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['xsd:time'] = {
         "properties": {
-          "xsd:time": {
-            "type": "date",
-            "format": "HH:mm:ssZ",
-            "copy_to": "o"
-          }
-        }
-      }
-
-      MAPPINGS['xsd:token'] = {
-        "properties": {
-          "xsd:token": {
+          "o": {
             "type": "keyword",
-            "copy_to": "o"
+            "fields": {
+              "xsd:time": {
+                "type": "date",
+                "format": "HH:mm:ssZ"
+              }
+            }
           }
         }
       }
@@ -143,18 +207,28 @@ module RDF
 
       MAPPINGS['lang_en'] = {
         "properties": {
-          "lang_en": {
-            "type": "text",
-            "analyzer": "english"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "lang_en": {
+                "type": "text",
+                "analyzer": "english"
+              }
+            }
           }
         }
       }
 
       MAPPINGS['lang_fi'] = {
         "properties": {
-          "lang_fi": {
-            "type": "text",
-            "analyzer": "finnish"
+          "o": {
+            "type": "keyword",
+            "fields": {
+              "lang_fi": {
+                "type": "text",
+                "analyzer": "finnish"
+              }
+            }
           }
         }
       }

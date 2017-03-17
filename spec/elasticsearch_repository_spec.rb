@@ -2,7 +2,7 @@ $:.unshift "."
 require 'spec_helper'
 
 #require 'rdf/spec/literal'
-require 'rdf/spec/enumerable'
+require 'rdf/spec/repository'
 require 'rdf/elasticsearch'
 
 describe RDF::Elasticsearch::Repository do
@@ -10,7 +10,6 @@ describe RDF::Elasticsearch::Repository do
     logger = RDF::Spec.logger
     logger.level = Logger::DEBUG
     @load_durable = lambda { RDF::Elasticsearch::Repository.new uri: "http://localhost:9200",
-                                                                clean: true,
                                                                 refresh: true,
                                                                 log: false }
     @repository = @load_durable.call
@@ -21,7 +20,7 @@ describe RDF::Elasticsearch::Repository do
   end
 
   # TODO: refactor this out to a shared example file
-  #       and use rdf/spec/literal for value
+  #       and use rdf/spec/literal for values
   shared_examples "a mapped RDF::Term" do
     include Elasticsearch::DSL
 
@@ -64,12 +63,11 @@ describe RDF::Elasticsearch::Repository do
 
     it 'should be searchable untyped' do
       hash = RDF::Elasticsearch::Conversion.serialize_object(subject)
-      value = hash[hash.delete(:type)]
 
       body = search do
         query do
           simple_query_string do
-            query value
+            query hash[:o]
           end
         end
       end
@@ -189,8 +187,8 @@ describe RDF::Elasticsearch::Repository do
   end
 
   # @see lib/rdf/spec/repository.rb in RDF-spec
-  it_behaves_like "an RDF::Enumerable" do
-    let(:enumerable) { @repository }
+  it_behaves_like "an RDF::Repository" do
+    let(:repository) { @repository }
   end
 end
 
