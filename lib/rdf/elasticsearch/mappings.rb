@@ -11,14 +11,14 @@ module RDF
       # Index mappings exist to tell Elasticsearch how to handle
       # (eg. index, analyze, store) data for each type
 
-      MAPPINGS['uri']     = { "type": "keyword" }
-      MAPPINGS['node']    = { "type": "keyword" }
-      MAPPINGS['token']   = { "type": "keyword" }
+      # MAPPINGS['uri']     = { "type": "keyword" }
+      # MAPPINGS['node']    = { "type": "keyword" }
+      # MAPPINGS['token']   = { "type": "keyword" }
       MAPPINGS['literal'] = { "type": "text" }
       # MAPPINGS['typed']   = { "type": "keyword" }
 
       #
-      # XSD datatypes for RDF::Litreral objects
+      # XSD datatypes for RDF::Literal objects
       #
 
       MAPPINGS['boolean']  = { "type": "boolean" }
