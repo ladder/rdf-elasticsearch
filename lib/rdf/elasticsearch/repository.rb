@@ -13,10 +13,9 @@ module RDF
 
         # create index
         @index = options['index'] || "quadb"
-        @client.indices.create index: @index unless @client.indices.exists? index: @index
 
-        # set mapping definitions
-        RDF::Elasticsearch::Mappings.ensure_mappings(self)
+        @client.indices.create index: @index,
+                               body: RDF::Elasticsearch::Mappings.index unless @client.indices.exists? index: @index
 
         super(options, &block)
       end
@@ -25,8 +24,8 @@ module RDF
       def supports?(feature)
         case feature.to_sym
           when :graph_name       then true
-          when :literal_equality then true
           when :atomic_write     then true
+          # when :literal_equality then true
           when :validity         then @options.fetch(:with_validity, true)
           else false
         end
@@ -149,6 +148,7 @@ module RDF
 
         def iterate_block(query_hash, &block)
           # Use scroll search syntax
+
           response = @client.search index: @index, size: 1000, scroll: '1m', body: query_hash
 
           # Call `scroll` until hits are empty
