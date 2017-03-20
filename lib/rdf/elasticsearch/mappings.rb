@@ -74,30 +74,18 @@ module RDF
         mappings = Hash.new
 
         mappings['_default_'] = {
-          "_all": {
-            "enabled": false
-          },
+          "_all": { "enabled": false },
           "properties": {
-            "s": {
-              "type": "keyword"
-            },
-            "p": {
-              "type": "keyword"
-            },
-            "o": {
-              "type": "keyword" # this becomes the _all field
-            },
-            "g": {
-              "type": "keyword"
-            }
+            "s": { "type": "keyword" },
+            "p": { "type": "keyword" },
+            "o": { "type": "keyword" }, # this becomes the _all field
+            "g": { "type": "keyword" }
           }
         }
 
         mappings['typed'] = {
           "properties": {
-            "datatype": {
-              "type": "keyword" # for typed literals
-            }
+            "datatype": { "type": "keyword" } # for typed literals
           }
         }
 
@@ -106,9 +94,7 @@ module RDF
             "properties": {
               "o": {
                 "type": "keyword",
-                "fields": {
-                  type => body
-                }
+                "fields": { type => body }
               }
             }
           }
